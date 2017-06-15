@@ -9,7 +9,7 @@ WORK IN PROGRESS.
 Project
 =======
 
-Notes. Requirement etc.
+Notes. Requirements etc.
 
 * For Python 3.
 
