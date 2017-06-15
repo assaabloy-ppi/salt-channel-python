@@ -3,7 +3,7 @@ salt-channel-python
 
 Python 3 implementation of Salt Channel v2.
 
-WORK IN PROGRESS.
+WORK IN PROGRESS..
 
 
 Project
