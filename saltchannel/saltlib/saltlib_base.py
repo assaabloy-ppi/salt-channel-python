@@ -51,5 +51,5 @@ class SaltLibBase:
     def crypto_box_open_afternm(self, m, c, n, k):
         raise NotImplementedError("SaltLibBase is abstract class")
 
-    def crypto_hash(self, h, m):
+    def crypto_hash(self, m):
         raise NotImplementedError("SaltLibBase is abstract class")
