@@ -27,5 +27,5 @@ class SaltLibNative(SaltLibBase, metaclass=Singleton):
         if m is None:
             raise ValueError("invalid parameter")
         h = ctypes.create_string_buffer(sodium.crypto_hash_sha512_bytes()).raw
-        wrap(sodium.crypto_hash_sha512(h, m.encode(), ctypes.c_ulonglong(len(m))))
+        wrap(sodium.crypto_hash_sha512(h, m, ctypes.c_ulonglong(len(m))))
         return h

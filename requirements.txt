@@ -1,0 +1,7 @@
+
+-e git+https://github.com/warner/python-tweetnacl.git#egg=tweetnacl
+-e .
+
+
+
+

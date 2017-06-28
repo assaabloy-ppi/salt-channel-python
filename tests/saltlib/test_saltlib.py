@@ -1,34 +1,43 @@
+import os
+import timeit
+from functools import partial
 import unittest
 from unittest import TestCase
-from saltchannel.saltlib.saltlib_native import SaltLibNative
-from saltchannel.saltlib.saltlib_pure import SaltLibPure
 
+from saltchannel.saltlib.saltlib_native import SaltLibNative
+from saltchannel.saltlib.saltlib_pynacl import SaltLibPyNaCl
+from saltchannel.saltlib.saltlib_pure import SaltLibPure
+from saltchannel.saltlib.saltlib_tweetnaclext import SaltLibTweetNaClExt
+
+naclapi_map = {
+            '1. SaltLibNative': SaltLibNative(),
+            '2. SaltLibPyNaCl': SaltLibPyNaCl(),
+            '3. SaltLibTweetNaClExt': SaltLibTweetNaClExt(),
+            '4. SaltLibPure': SaltLibPure(),
+        }
 
 class BaseTest(TestCase):
     def __init__(self, *args, **kwargs):
         TestCase.__init__(self, *args, **kwargs)
 
     def setUp(self):
-        self.naclapi_map = {
-            'SaltLibNative': SaltLibNative(),
-            'SaltLibPure': SaltLibPure(),
-        }
+        pass
 
     def tearDown(self):
         pass
 
 
-class TestSaltLibNative(BaseTest):
+class TestSaltLib(BaseTest):
 
     def test_nacl_api_available(self):
-        for (name, api) in self.naclapi_map.items():
+        for (name, api) in naclapi_map.items():
             with self.subTest(name=name):
                 self.assertTrue(api.isAvailable())
 
     def test_crypto_hash_emptymsg(self):
-        for (name, api) in self.naclapi_map.items():
+        for (name, api) in naclapi_map.items():
             with self.subTest(name=name):
-                self.assertEqual(api.crypto_hash(''),
+                self.assertEqual(api.crypto_hash(b''),
                              bytes([
                                 0xcf, 0x83, 0xe1, 0x35, 0x7e, 0xef, 0xb8, 0xbd,
                                 0xf1, 0x54, 0x28, 0x50, 0xd6, 0x6d, 0x80, 0x07,
@@ -41,7 +50,9 @@ class TestSaltLibNative(BaseTest):
                             ]))
 
     def test_crypto_hash_abc(self):
-        self.assertEqual(self.naclapi_map['SaltLibNative'].crypto_hash('abc'),
+        for (name, api) in naclapi_map.items():
+            with self.subTest(name=name):
+                self.assertEqual(api.crypto_hash(b'abc'),
                          bytes([
                              0xdd, 0xaf, 0x35, 0xa1, 0x93, 0x61, 0x7a, 0xba,
                              0xcc, 0x41, 0x73, 0x49, 0xae, 0x20, 0x41, 0x31,
@@ -52,6 +63,38 @@ class TestSaltLibNative(BaseTest):
                              0x45, 0x4d, 0x44, 0x23, 0x64, 0x3c, 0xe8, 0x0e,
                              0x2a, 0x9a, 0xc9, 0x4f, 0xa5, 0x4c, 0xa4, 0x9f,
                          ]))
+
+
+class BenchSaltLib:
+
+    def __init__(self):
+        self.rndmsg = os.urandom(256)
+
+    def set_api(self, api):
+        self.api = api
+
+    def body_crypto_hash(self):
+        self.api.crypto_hash(self.rndmsg)
+        pass
+
+    def body_SYNTHETIC(self):
+        self.api.crypto_hash(self.rndmsg)
+        self.api.crypto_hash(self.rndmsg)
+        self.api.crypto_hash(self.rndmsg)
+        pass
+
+    def run_bench_single(self, f):
+        print(" {}() time: {:.3f} ms".format(f.__name__.lstrip("body_"),
+                                          1000*min(timeit.Timer(partial(f)).repeat(repeat=33, number=1))))
+
+
+    def run_bench_suite(self):
+        for apiname, api in sorted(naclapi_map.items()):
+            print("="*79, "\n {}\n".format(api.__class__.__name__), "-"*78, "\n")
+            self.set_api(api)
+            for mtd in [method for method in dir(self)
+                        if callable(getattr(self, method)) and method.__str__().startswith("body_")]:
+                self.run_bench_single(getattr(self, mtd))
 
 if __name__ == '__main__':
     unittest.main()
