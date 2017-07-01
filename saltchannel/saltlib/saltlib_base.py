@@ -30,7 +30,8 @@ class SaltLibBase:
     def getName(self):
         raise NotImplementedError("SaltLibBase is abstract class")
 
-    def crypto_sign_keypair_not_random(self, pk, sk):
+    # ret: pk
+    def crypto_sign_keypair_not_random(self, sk):
         raise NotImplementedError("SaltLibBase is abstract class")
 
     def crypto_sign(self, sm, m, sk):

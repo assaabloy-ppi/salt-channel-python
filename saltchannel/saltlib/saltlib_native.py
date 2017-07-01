@@ -23,6 +23,16 @@ class SaltLibNative(SaltLibBase, metaclass=Singleton):
     def isAvailable():
         return False if not sodium._name else True
 
+    # ret: pk, sk
+    def crypto_sign_keypair_not_random(self, seed):
+        if len(seed) != self.crypto_sign_SEEDBYTES:
+            raise ValueError("Invalid seed")
+        pk = ctypes.create_string_buffer(self.crypto_sign_PUBLICKEYBYTES)
+        sk = ctypes.create_string_buffer(self.crypto_sign_SECRETKEYBYTES)
+        wrap(sodium.crypto_sign_seed_keypair(pk, sk, seed))
+        return pk.raw, sk.raw
+
+
     def crypto_hash(self, m):
         if m is None:
             raise ValueError("invalid parameter")

@@ -9,5 +9,9 @@ class SaltLibTweetNaClExt(SaltLibBase, metaclass=Singleton):
     def isAvailable():
         return True
 
+    # ret: pk, sk
+    def crypto_sign_keypair_not_random(self, seed):
+        raise NotImplementedError("Not Implemented")
+
     def crypto_hash(self, m):
         return nacl.crypto_hash(m)
