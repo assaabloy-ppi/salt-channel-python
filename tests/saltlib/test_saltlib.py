@@ -111,6 +111,7 @@ class BenchSaltLib:
 
     def __init__(self):
         self.rndmsg = os.urandom(128)
+        self.seed = os.urandom(32)
 
     def set_api(self, api):
         self.api = api
@@ -119,10 +120,14 @@ class BenchSaltLib:
         self.api.crypto_hash(self.rndmsg)
         pass
 
+    def body_crypto_sign_keypair_not_random(self):
+        self.api.crypto_sign_keypair_not_random(self.seed)
+        pass
+
+
     def body_SYNTHETIC(self):
-        self.api.crypto_hash(self.rndmsg)
-        self.api.crypto_hash(self.rndmsg)
-        self.api.crypto_hash(self.rndmsg)
+        self.body_crypto_hash()
+        self.body_crypto_sign_keypair_not_random()
         pass
 
     def run_bench_single(self, f):
