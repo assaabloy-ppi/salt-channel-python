@@ -4,6 +4,7 @@ from saltchannel.saltlib.pure_pynacl.tweetnacl import u8
 
 from saltchannel.util.py import Singleton
 from saltchannel.saltlib.saltlib_base import SaltLibBase
+from saltchannel.saltlib.saltlib_base import BadSignatureException
 
 class SaltLibPure(SaltLibBase, metaclass=Singleton):
 
@@ -29,6 +30,29 @@ class SaltLibPure(SaltLibBase, metaclass=Singleton):
         tweetnacl.pack(pk, p)
         return bytes(pk), seed + bytes(pk)
 
+    # ret: sm
+    def crypto_sign(self, m, sk):
+        sm = bytearray(len(m) + self.crypto_sign_BYTES)
+        smlen = -1
+        tweetnacl.crypto_sign_ed25519_tweet(sm, smlen, m, len(m), sk)
+        return bytes(sm)
+
+    # ret: m
+    def crypto_sign_open(self, sm, pk):
+        m = bytearray(len(sm))
+        mlen = -1
+        res = tweetnacl.crypto_sign_ed25519_tweet_open(m, mlen, sm, len(sm), pk)
+        if res != 0:
+            raise BadSignatureException()
+        return bytes(m[:len(sm) - self.crypto_sign_BYTES])
+
+
+    def crypto_box_keypair_not_random(self, sk):
+        if len(sk) != self.crypto_box_SECRETKEYBYTES:
+            raise ValueError("Invalid secret key length")
+        pk = IntArray(u8, size=self.crypto_box_PUBLICKEYBYTES)
+        tweetnacl.crypto_scalarmult_curve25519_tweet_base(pk, sk)
+        return bytes(pk), bytes(sk)
 
     def crypto_hash(self, m):
         if m is None:

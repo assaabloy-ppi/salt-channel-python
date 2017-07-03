@@ -7,6 +7,7 @@ from nacl.exceptions import ensure
 
 from saltchannel.util.py import Singleton
 from saltchannel.saltlib.saltlib_base import SaltLibBase
+from saltchannel.saltlib.saltlib_base import BadSignatureException
 
 class SaltLibPyNaCl(SaltLibBase, metaclass=Singleton):
 
@@ -27,6 +28,23 @@ class SaltLibPyNaCl(SaltLibBase, metaclass=Singleton):
         return (ffi.buffer(pk, self.crypto_sign_PUBLICKEYBYTES)[:],
                 ffi.buffer(sk, self.crypto_sign_SECRETKEYBYTES)[:],
                 )
+
+    # ret: sm
+    def crypto_sign(self, m, sk):
+        return bindings.crypto_sign(m, sk)
+
+    # ret: m
+    def crypto_sign_open(self, sm, pk):
+        try:
+            return bindings.crypto_sign_open(sm, pk)
+        except Exception as e:
+            raise BadSignatureException(e)
+
+    # ret: pk, sk
+    def crypto_box_keypair_not_random(self, sk):
+        if len(sk) != self.crypto_box_SECRETKEYBYTES:
+            raise ValueError("Invalid secret key length")
+        return bindings.crypto_scalarmult_base(sk), sk
 
     def crypto_hash(self, m):
         return bindings.crypto_hash(m)

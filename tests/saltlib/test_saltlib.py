@@ -5,6 +5,7 @@ import unittest
 from unittest import TestCase
 
 from saltchannel.saltlib.saltlib_base import SaltLibBase
+from saltchannel.saltlib.saltlib_base import BadSignatureException
 from saltchannel.saltlib.saltlib_native import SaltLibNative
 from saltchannel.saltlib.saltlib_pynacl import SaltLibPyNaCl
 from saltchannel.saltlib.saltlib_pure import SaltLibPure
@@ -99,12 +100,38 @@ class TestSaltLib(BaseTest):
                          ]))
 
     def test_crypto_sign_keypair_not_random(self):
-        seed = SaltTestData.aSigSec[0:SaltLibBase.crypto_sign_SEEDBYTES];
+        seed = SaltTestData.aSigSec[0:SaltLibBase.crypto_sign_SEEDBYTES]
         for (name, api) in naclapi_map.items():
             with self.subTest(name=name):
                 (pk, sk) = api.crypto_sign_keypair_not_random(seed)
                 self.assertEqual(SaltTestData.aSigPub, pk)
                 self.assertEqual(SaltTestData.aSigSec, sk)
+
+    def test_crypto_box_keypair_not_random(self):
+        sk1 = SaltTestData.aEncSec
+        sk2 = SaltTestData.bEncSec
+        for (name, api) in naclapi_map.items():
+            with self.subTest(name=name):
+                (pk1, sk1) = api.crypto_box_keypair_not_random(sk1)
+                self.assertEqual(SaltTestData.aEncPub, pk1)
+                self.assertEqual(SaltTestData.aEncSec, sk1)
+                (pk2, sk2) = api.crypto_box_keypair_not_random(sk2)
+                self.assertEqual(SaltTestData.bEncPub, pk2)
+                self.assertEqual(SaltTestData.bEncSec, sk2)
+
+    def test_crypto_sign(self):
+        m = bytes([3, 3, 3, 3])
+        sk = SaltTestData.aSigSec
+        pk = SaltTestData.aSigPub
+        for (name, api) in naclapi_map.items():
+            with self.subTest(name=name):
+                sm = api.crypto_sign(m, sk)
+                m2 = api.crypto_sign_open(sm, pk)
+                self.assertEqual(m, m2[:len(m)])
+                # break the signature
+                badsm = bytes([1]) + bytearray(sm[1:])
+                with self.assertRaises(BadSignatureException) as cm:
+                    api.crypto_sign_open(badsm, pk)
 
 
 class BenchSaltLib:
@@ -112,6 +139,7 @@ class BenchSaltLib:
     def __init__(self):
         self.rndmsg = os.urandom(128)
         self.seed = os.urandom(32)
+        self.box_sk = os.urandom(SaltLibBase.crypto_box_SECRETKEYBYTES)
 
     def set_api(self, api):
         self.api = api
@@ -124,15 +152,29 @@ class BenchSaltLib:
         self.api.crypto_sign_keypair_not_random(self.seed)
         pass
 
+    def body_crypto_sign(self):
+        m = bytes(os.urandom(256))
+        sk = SaltTestData.aSigSec
+        pk = SaltTestData.aSigPub
+        sm = self.api.crypto_sign(m, sk)
+        m2 = self.api.crypto_sign_open(sm, pk)
+
+
+    def body_crypto_box_keypair_not_random(self):
+        self.api.crypto_box_keypair_not_random(self.box_sk)
+        pass
+
 
     def body_SYNTHETIC(self):
         self.body_crypto_hash()
         self.body_crypto_sign_keypair_not_random()
+        self.body_crypto_sign()
+        self.body_crypto_box_keypair_not_random()
         pass
 
     def run_bench_single(self, f):
         print(" {}() time: {:.3f} ms".format(f.__name__.lstrip("body_"),
-                                          1000*min(timeit.Timer(partial(f)).repeat(repeat=33, number=1))))
+                                          1000*min(timeit.Timer(partial(f)).repeat(repeat=3, number=1))))
 
 
     def run_bench_suite(self):

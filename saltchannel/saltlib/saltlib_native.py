@@ -3,6 +3,7 @@ import ctypes.util
 
 from saltchannel.util.py import Singleton
 from saltchannel.saltlib.saltlib_base import SaltLibBase
+from saltchannel.saltlib.saltlib_base import BadSignatureException
 
 sodium = ctypes.cdll.LoadLibrary(ctypes.util.find_library('sodium'))
 
@@ -32,6 +33,29 @@ class SaltLibNative(SaltLibBase, metaclass=Singleton):
         wrap(sodium.crypto_sign_seed_keypair(pk, sk, seed))
         return pk.raw, sk.raw
 
+    # ret: sm
+    def crypto_sign(self, m, sk):
+        sm = ctypes.create_string_buffer(len(m) + self.crypto_sign_BYTES)
+        smlen = ctypes.c_ulonglong()
+        wrap(sodium.crypto_sign(sm, ctypes.byref(smlen), m, ctypes.c_ulonglong(len(m)), sk))
+        return sm.raw
+
+    # ret: m
+    def crypto_sign_open(self, sm, pk):
+        m = ctypes.create_string_buffer(len(sm))
+        mlen = ctypes.c_ulonglong()
+        res = sodium.crypto_sign_open(m, ctypes.byref(mlen), sm, ctypes.c_ulonglong(len(sm)), pk)
+        if res != 0:
+            raise BadSignatureException()
+        return m.raw[:mlen.value]
+
+    # ret: pk, sk
+    def crypto_box_keypair_not_random(self, sk):
+        if len(sk) != self.crypto_box_SECRETKEYBYTES:
+            raise ValueError("Invalid secret key length")
+        pk = ctypes.create_string_buffer(self.crypto_box_PUBLICKEYBYTES)
+        wrap(sodium.crypto_scalarmult_base(pk, sk))
+        return pk.raw, sk
 
     def crypto_hash(self, m):
         if m is None:

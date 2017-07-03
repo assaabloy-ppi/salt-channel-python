@@ -2,7 +2,7 @@ from util.py import Singleton
 from saltlib.saltlib_native import SaltLibNative
 from saltlib.saltlib_pure import SaltLibPure
 
-class NoSuchLibException(Exception):
+class NoSuchLibException(RuntimeError):
     pass
 
 class SaltLib(metaclass=Singleton):

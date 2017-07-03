@@ -1,4 +1,10 @@
 
+class BadSignatureException(RuntimeError):
+    pass
+
+class BadEncryptedDataException(RuntimeError):
+    pass
+
 class SaltLibBase:
 
     crypto_sign_PUBLICKEYBYTES = 32
@@ -34,13 +40,13 @@ class SaltLibBase:
     def crypto_sign_keypair_not_random(self, sk):
         raise NotImplementedError("SaltLibBase is abstract class")
 
-    def crypto_sign(self, sm, m, sk):
+    def crypto_sign(self, m, sk):
         raise NotImplementedError("SaltLibBase is abstract class")
 
-    def crypto_sign_open(self, m, sm, pk):
+    def crypto_sign_open(self, sm, pk):
         raise NotImplementedError("SaltLibBase is abstract class")
 
-    def crypto_box_keypair_not_random(self, pk, sk):
+    def crypto_box_keypair_not_random(self, sk):
         raise NotImplementedError("SaltLibBase is abstract class")
 
     def crypto_box_beforenm(self, k, pk, sk):
