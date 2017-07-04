@@ -8,6 +8,7 @@ from nacl.exceptions import ensure
 from saltchannel.util.py import Singleton
 from saltchannel.saltlib.saltlib_base import SaltLibBase
 from saltchannel.saltlib.saltlib_base import BadSignatureException
+from saltchannel.saltlib.saltlib_base import BadEncryptedDataException
 
 class SaltLibPyNaCl(SaltLibBase, metaclass=Singleton):
 
@@ -39,6 +40,21 @@ class SaltLibPyNaCl(SaltLibBase, metaclass=Singleton):
             return bindings.crypto_sign_open(sm, pk)
         except Exception as e:
             raise BadSignatureException(e)
+
+    # ret: k
+    def crypto_box_beforenm(self, pk, sk):
+        return bindings.crypto_box_beforenm(pk, sk)
+
+    # ret: c
+    def crypto_box_afternm(self, m, n, k):
+        return bindings.crypto_box_afternm(m, n, k)
+
+    # ret: m
+    def crypto_box_open_afternm(self, c, n, k):
+        try:
+            return bindings.crypto_box_open_afternm(c, n, k)
+        except Exception as e:
+            raise BadEncryptedDataException(e)
 
     # ret: pk, sk
     def crypto_box_keypair_not_random(self, sk):

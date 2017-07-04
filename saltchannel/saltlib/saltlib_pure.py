@@ -5,6 +5,7 @@ from saltchannel.saltlib.pure_pynacl.tweetnacl import u8
 from saltchannel.util.py import Singleton
 from saltchannel.saltlib.saltlib_base import SaltLibBase
 from saltchannel.saltlib.saltlib_base import BadSignatureException
+from saltchannel.saltlib.saltlib_base import BadEncryptedDataException
 
 class SaltLibPure(SaltLibBase, metaclass=Singleton):
 
@@ -53,6 +54,34 @@ class SaltLibPure(SaltLibBase, metaclass=Singleton):
         pk = IntArray(u8, size=self.crypto_box_PUBLICKEYBYTES)
         tweetnacl.crypto_scalarmult_curve25519_tweet_base(pk, sk)
         return bytes(pk), bytes(sk)
+
+    # ret: k
+    def crypto_box_beforenm(self, pk, sk):
+        #k = IntArray(u8, size=self.crypto_box_SHAREDKEYBYTES)
+        k = bytearray(self.crypto_box_SHAREDKEYBYTES)
+        tweetnacl.crypto_box_curve25519xsalsa20poly1305_tweet_beforenm(k, pk, sk)
+        return bytes(k)
+
+    # ret: c
+    def crypto_box_afternm(self, m, n, k):
+        padded = (b"\x00" * self.crypto_box_ZEROBYTES) + m
+        #c = IntArray(u8, size=len(padded))
+        c = bytearray(len(padded))
+        tweetnacl.crypto_box_curve25519xsalsa20poly1305_tweet_afternm(c, padded, len(padded), n, k)
+        return bytes(c)[self.crypto_box_BOXZEROBYTES:]
+
+    # ret: m
+    def crypto_box_open_afternm(self, c, n, k):
+        try:
+            padded = (b"\x00" * self.crypto_box_BOXZEROBYTES) + c
+            #m = IntArray(u8, size=len(padded))
+            m = bytearray(len(padded))
+            res = tweetnacl.crypto_box_curve25519xsalsa20poly1305_tweet_open_afternm(m, padded, len(padded), n, k)
+            if res != 0:
+                raise BadEncryptedDataException()
+            return bytes(m)[self.crypto_box_ZEROBYTES:]
+        except Exception as e:
+            raise BadEncryptedDataException(e)
 
     def crypto_hash(self, m):
         if m is None:

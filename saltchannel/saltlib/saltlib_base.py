@@ -1,3 +1,4 @@
+from saltchannel.util.py import abstract
 
 class BadSignatureException(RuntimeError):
     pass
@@ -22,41 +23,24 @@ class SaltLibBase:
     crypto_box_OVERHEADBYTES = 16
     crypto_box_INTERNALOVERHEADBYTES = 32
 
-    crypto_secretbox_KEY_BYTES = 32
-    crypto_secretbox_NONCE_BYTES = 24
-    crypto_secretbox_OVERHEAD_BYTES = 16
-    crypto_secretbox_INTERNAL_OVERHEAD_BYTES = 32
-
     crypto_hash_BYTES = 64
 
     @staticmethod
-    def isAvailable():
-        raise NotImplementedError("SaltLibBase is abstract class")
-
-    def getName(self):
-        raise NotImplementedError("SaltLibBase is abstract class")
-
-    # ret: pk
-    def crypto_sign_keypair_not_random(self, sk):
-        raise NotImplementedError("SaltLibBase is abstract class")
-
-    def crypto_sign(self, m, sk):
-        raise NotImplementedError("SaltLibBase is abstract class")
-
-    def crypto_sign_open(self, sm, pk):
-        raise NotImplementedError("SaltLibBase is abstract class")
-
-    def crypto_box_keypair_not_random(self, sk):
-        raise NotImplementedError("SaltLibBase is abstract class")
-
-    def crypto_box_beforenm(self, k, pk, sk):
-        raise NotImplementedError("SaltLibBase is abstract class")
-
-    def crypto_box_afternm(self, c, m, n, k):
-        raise NotImplementedError("SaltLibBase is abstract class")
-
-    def crypto_box_open_afternm(self, m, c, n, k):
-        raise NotImplementedError("SaltLibBase is abstract class")
-
-    def crypto_hash(self, m):
-        raise NotImplementedError("SaltLibBase is abstract class")
+    def isAvailable():  abstract()
+    def getName(self):  abstract()
+    # ret: pk, sk
+    def crypto_sign_keypair_not_random(self, sk):  abstract()
+    # ret: sm
+    def crypto_sign(self, m, sk):  abstract()
+    # ret: m
+    def crypto_sign_open(self, sm, pk):  abstract()
+    # ret: pk, sk
+    def crypto_box_keypair_not_random(self, sk):  abstract()
+    # ret: k
+    def crypto_box_beforenm(self, pk, sk):  abstract()
+    # ret: c
+    def crypto_box_afternm(self, m, n, k):  abstract()
+    # ret: m
+    def crypto_box_open_afternm(self, c, n, k):  abstract()
+    # ret: h
+    def crypto_hash(self, m):  abstract()

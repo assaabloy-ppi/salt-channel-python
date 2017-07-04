@@ -4,13 +4,14 @@ import ctypes.util
 from saltchannel.util.py import Singleton
 from saltchannel.saltlib.saltlib_base import SaltLibBase
 from saltchannel.saltlib.saltlib_base import BadSignatureException
+from saltchannel.saltlib.saltlib_base import BadEncryptedDataException
 
 sodium = ctypes.cdll.LoadLibrary(ctypes.util.find_library('sodium'))
 
 
 def wrap(code):
     if code != 0:
-        raise ValueError("libsodium returned {}", code)
+        raise ValueError("libsodium returned ", code)
 
 
 class SaltLibNative(SaltLibBase, metaclass=Singleton):
@@ -56,6 +57,28 @@ class SaltLibNative(SaltLibBase, metaclass=Singleton):
         pk = ctypes.create_string_buffer(self.crypto_box_PUBLICKEYBYTES)
         wrap(sodium.crypto_scalarmult_base(pk, sk))
         return pk.raw, sk
+
+    # ret: k
+    def crypto_box_beforenm(self, pk, sk):
+        c = ctypes.create_string_buffer(self.crypto_box_SHAREDKEYBYTES)
+        wrap(sodium.crypto_box_beforenm(c, pk, sk))
+        return c.raw
+
+    # ret: c
+    def crypto_box_afternm(self, m, n, k):
+        padded = (b"\x00"*self.crypto_box_ZEROBYTES) + m
+        c = ctypes.create_string_buffer(len(padded))
+        wrap(sodium.crypto_box_afternm(c, padded, ctypes.c_ulonglong(len(padded)), n, k))
+        return c.raw[self.crypto_box_BOXZEROBYTES:]
+
+    # ret: m
+    def crypto_box_open_afternm(self, c, n, k):
+        padded = (b"\x00"*self.crypto_box_BOXZEROBYTES) + c
+        m = ctypes.create_string_buffer(len(padded))
+        res = sodium.crypto_box_open_afternm(m, padded, ctypes.c_ulonglong(len(padded)), n, k)
+        if (res != 0):
+            raise BadEncryptedDataException()
+        return m.raw[self.crypto_box_ZEROBYTES:]
 
     def crypto_hash(self, m):
         if m is None:

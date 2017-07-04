@@ -6,6 +6,7 @@ from unittest import TestCase
 
 from saltchannel.saltlib.saltlib_base import SaltLibBase
 from saltchannel.saltlib.saltlib_base import BadSignatureException
+from saltchannel.saltlib.saltlib_base import BadEncryptedDataException
 from saltchannel.saltlib.saltlib_native import SaltLibNative
 from saltchannel.saltlib.saltlib_pynacl import SaltLibPyNaCl
 from saltchannel.saltlib.saltlib_pure import SaltLibPure
@@ -14,8 +15,8 @@ from saltchannel.saltlib.saltlib_tweetnaclext import SaltLibTweetNaClExt
 naclapi_map = {
             '1. SaltLibNative': SaltLibNative(),
             '2. SaltLibPyNaCl': SaltLibPyNaCl(),
-            #'3. SaltLibTweetNaClExt': SaltLibTweetNaClExt(),
-            '4. SaltLibPure': SaltLibPure(),
+            '3. SaltLibTweetNaClExt': SaltLibTweetNaClExt(),
+            #'4. SaltLibPure': SaltLibPure(),
         }
 
 class SaltTestData:
@@ -128,17 +129,55 @@ class TestSaltLib(BaseTest):
                 sm = api.crypto_sign(m, sk)
                 m2 = api.crypto_sign_open(sm, pk)
                 self.assertEqual(m, m2[:len(m)])
+
                 # break the signature
                 badsm = bytes([1]) + bytearray(sm[1:])
                 with self.assertRaises(BadSignatureException) as cm:
                     api.crypto_sign_open(badsm, pk)
 
+    def test_crypto_box_beforenm(self):
+        ask = SaltTestData.aEncSec
+        apk = SaltTestData.aEncPub
+        bsk = SaltTestData.bEncSec
+        bpk = SaltTestData.bEncPub
+        for (name, api) in naclapi_map.items():
+            with self.subTest(name=name):
+                k1 = api.crypto_box_beforenm(bpk, ask)
+                k2 = api.crypto_box_beforenm(apk, bsk)
+                self.assertEqual(k1, k2)
+
+    def test_crypto_box(self):
+        ask = SaltTestData.aEncSec
+        apk = SaltTestData.aEncPub
+        bsk = SaltTestData.bEncSec
+        bpk = SaltTestData.bEncPub
+        m = b'abcdEFGH'
+        n = os.urandom(SaltLibBase.crypto_box_NONCEBYTES)
+        #m = /*(b'\x00'*SaltLibBase.crypto_box_BOXZEROBYTES)*/ + message
+        #m = message
+        for (name, api) in naclapi_map.items():
+            with self.subTest(name=name):
+                k1 = api.crypto_box_beforenm(bpk, ask)
+                k2 = api.crypto_box_beforenm(apk, bsk)
+                c = api.crypto_box_afternm(m, n, k1)
+                m2 = api.crypto_box_open_afternm(c, n, k2)
+                #message2 = m2 #[SaltLibBase.crypto_box_BOXZEROBYTES:]
+                self.assertEqual(len(m), len(m2))
+                self.assertEqual(m, m2)
+
+                # break ciphertext
+                _c2 = bytearray(c)
+                _c2[-1] = ~_c2[-1] & 0xff
+                c2 = bytes(_c2)
+                with self.assertRaises(BadEncryptedDataException) as cm:
+                    m3 = api.crypto_box_open_afternm(c2, n, k2)
 
 class BenchSaltLib:
 
     def __init__(self):
-        self.rndmsg = os.urandom(128)
-        self.seed = os.urandom(32)
+        self.rndmsg = os.urandom(10240)
+        self.seed = os.urandom(SaltLibBase.crypto_sign_SEEDBYTES)
+        self.nonce = os.urandom(SaltLibBase.crypto_box_NONCEBYTES)
         self.box_sk = os.urandom(SaltLibBase.crypto_box_SECRETKEYBYTES)
 
     def set_api(self, api):
@@ -153,12 +192,20 @@ class BenchSaltLib:
         pass
 
     def body_crypto_sign(self):
-        m = bytes(os.urandom(256))
+        m = self.rndmsg
         sk = SaltTestData.aSigSec
         pk = SaltTestData.aSigPub
         sm = self.api.crypto_sign(m, sk)
         m2 = self.api.crypto_sign_open(sm, pk)
 
+    def body_crypto_box(self):
+        ask = SaltTestData.aEncSec;
+        bpk = SaltTestData.bEncPub;
+        m = b'\0' * SaltLibBase.crypto_box_BOXZEROBYTES + self.rndmsg
+
+        k1 = self.api.crypto_box_beforenm(bpk, ask)
+        c = self.api.crypto_box_afternm(m, self.nonce, k1)
+        m2 = self.api.crypto_box_open_afternm(c, self.nonce, k1)
 
     def body_crypto_box_keypair_not_random(self):
         self.api.crypto_box_keypair_not_random(self.box_sk)
@@ -170,11 +217,12 @@ class BenchSaltLib:
         self.body_crypto_sign_keypair_not_random()
         self.body_crypto_sign()
         self.body_crypto_box_keypair_not_random()
+        self.body_crypto_box()
         pass
 
     def run_bench_single(self, f):
         print(" {}() time: {:.3f} ms".format(f.__name__.lstrip("body_"),
-                                          1000*min(timeit.Timer(partial(f)).repeat(repeat=3, number=1))))
+                                          1000*min(timeit.Timer(partial(f)).repeat(repeat=33, number=1))))
 
 
     def run_bench_suite(self):
