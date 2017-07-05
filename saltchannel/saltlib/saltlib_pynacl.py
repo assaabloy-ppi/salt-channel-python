@@ -1,9 +1,10 @@
+# -*- coding: utf-8 -*-
+
 from nacl import bindings
 
 from nacl import exceptions as exc
 from nacl._sodium import ffi, lib
 from nacl.exceptions import ensure
-
 
 from saltchannel.util.py import Singleton
 from saltchannel.saltlib.saltlib_base import SaltLibBase
@@ -62,5 +63,6 @@ class SaltLibPyNaCl(SaltLibBase, metaclass=Singleton):
             raise ValueError("Invalid secret key length")
         return bindings.crypto_scalarmult_base(sk), sk
 
+    # ret: h
     def crypto_hash(self, m):
         return bindings.crypto_hash(m)

@@ -6,6 +6,36 @@ Python 3 implementation of Salt Channel v2.
 WORK IN PROGRESS..
 
 
+Usage
+======
+Running unit tests:
+    
+`python3 setup.py test`
+
+Running benchmarking suite for 'saltlib':
+     
+`python3 setup.py benchmark_saltlib`
+
+
+Package 'saltlib'
+================
+This package is abstraction layer above different NaCl-based crypto libraries with 'pythonized' API style. 
+
+For now next underlying crypto APIs are supported:
+* LIB_TYPE_NATIVE - ctypes based bindings to system 'libsodium' library. 
+* LIB_TYPE_PYNACL - PyNaCl package.
+* LIB_TYPE_TWEETNACL_EXT - Native Python C extension calling original tweetnacl C code.
+
+Current limitation: manual dependency installation required.
+
+* PyNaCl
+
+`python3 -m pip install --user PyNaCl`
+
+* python-tweetnacl
+
+`python3 -m pip install --user git+https://github.com/ppmag/python-tweetnacl.git#egg=tweetnacl`
+
 Project
 =======
 
@@ -27,6 +57,7 @@ Notes. Requirements etc.
 Log entries
 ===========
 
+* 2017-07-05, Alex, SaltLib package (NaCl API layer) is ready 
 * 2017-06-15, Frans, repo created on Github. MIT License. 
 
 

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 def abstract():
     import inspect
     caller = inspect.getouterframes(inspect.currentframe())[1][3]

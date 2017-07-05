@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import os
 import timeit
 from functools import partial
@@ -153,15 +155,12 @@ class TestSaltLib(BaseTest):
         bpk = SaltTestData.bEncPub
         m = b'abcdEFGH'
         n = os.urandom(SaltLibBase.crypto_box_NONCEBYTES)
-        #m = /*(b'\x00'*SaltLibBase.crypto_box_BOXZEROBYTES)*/ + message
-        #m = message
         for (name, api) in naclapi_map.items():
             with self.subTest(name=name):
                 k1 = api.crypto_box_beforenm(bpk, ask)
                 k2 = api.crypto_box_beforenm(apk, bsk)
                 c = api.crypto_box_afternm(m, n, k1)
                 m2 = api.crypto_box_open_afternm(c, n, k2)
-                #message2 = m2 #[SaltLibBase.crypto_box_BOXZEROBYTES:]
                 self.assertEqual(len(m), len(m2))
                 self.assertEqual(m, m2)
 
@@ -199,8 +198,8 @@ class BenchSaltLib:
         m2 = self.api.crypto_sign_open(sm, pk)
 
     def body_crypto_box(self):
-        ask = SaltTestData.aEncSec;
-        bpk = SaltTestData.bEncPub;
+        ask = SaltTestData.aEncSec
+        bpk = SaltTestData.bEncPub
         m = b'\0' * SaltLibBase.crypto_box_BOXZEROBYTES + self.rndmsg
 
         k1 = self.api.crypto_box_beforenm(bpk, ask)

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import tweetnacl.raw as tweetnacl
 
 from saltchannel.util.py import Singleton
@@ -49,5 +51,6 @@ class SaltLibTweetNaClExt(SaltLibBase, metaclass=Singleton):
             raise ValueError("Invalid secret key length")
         return tweetnacl.crypto_scalarmult_base(sk), sk
 
+    # ret: h
     def crypto_hash(self, m):
         return tweetnacl.crypto_hash(m)

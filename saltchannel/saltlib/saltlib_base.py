@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from saltchannel.util.py import abstract
 
 class BadSignatureException(RuntimeError):

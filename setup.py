@@ -1,13 +1,10 @@
-#from distutils.core import setup
 from setuptools import setup, find_packages
 from setuptools import Command
 from tests.saltlib import test_saltlib
 
 class BenchSaltLibCmd(Command):
-    """ Run my command.
-    """
-    description = 'Estimate saltlib performance with different crypto APIs'
 
+    description = 'Estimate saltlib performance with different crypto APIs'
     user_options = [
     ]
 
