@@ -1,6 +1,13 @@
+import sys
+
+if sys.version_info[0] < 3:
+    print "Python version " + str(sys.version_info[0]) +" is not supported. Minimal is Python 3.4"
+    exit(1)
+
 from setuptools import setup, find_packages
 from setuptools import Command
 from tests.saltlib import test_saltlib
+
 
 class BenchSaltLibCmd(Command):
 
