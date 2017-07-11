@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 
-from saltchannel.util.py import Singleton
-from saltlib.saltlib_native import SaltLibNative
-from saltlib.saltlib_pynacl import SaltLibPyNaCl
-from saltlib.saltlib_tweetnaclext import SaltLibTweetNaClExt
+from saltchannel.util import Singleton
+from .saltlib_native import SaltLibNative
+from .saltlib_pynacl import SaltLibPyNaCl
+from .saltlib_tweetnaclext import SaltLibTweetNaClExt
 
-class NoSuchLibException(RuntimeError):
-    pass
+
 
 class SaltLib(metaclass=Singleton):
     LIB_TYPE_BEST = 0

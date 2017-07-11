@@ -2,12 +2,10 @@
 
 import tweetnacl.raw as tweetnacl
 
-from saltchannel.util.py import Singleton
-from saltchannel.saltlib.saltlib_base import SaltLibBase
-from saltchannel.saltlib.saltlib_base import BadSignatureException
-from saltchannel.saltlib.saltlib_base import BadEncryptedDataException
+from .exceptions import BadEncryptedDataException, BadSignatureException
+from .saltlib_base import SaltLibBase
 
-class SaltLibTweetNaClExt(SaltLibBase, metaclass=Singleton):
+class SaltLibTweetNaClExt(SaltLibBase):
 
     @staticmethod
     def isAvailable():

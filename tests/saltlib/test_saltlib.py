@@ -6,13 +6,13 @@ from functools import partial
 import unittest
 from unittest import TestCase
 
+import saltchannel.saltlib
+
 from saltchannel.saltlib.saltlib_base import SaltLibBase
-from saltchannel.saltlib.saltlib_base import BadSignatureException
-from saltchannel.saltlib.saltlib_base import BadEncryptedDataException
 from saltchannel.saltlib.saltlib_native import SaltLibNative
 from saltchannel.saltlib.saltlib_pynacl import SaltLibPyNaCl
-from saltchannel.saltlib.saltlib_pure import SaltLibPure
 from saltchannel.saltlib.saltlib_tweetnaclext import SaltLibTweetNaClExt
+#from saltchannel.saltlib.saltlib_pure import SaltLibPure
 
 naclapi_map = {
             '1. SaltLibNative': SaltLibNative(),
@@ -26,14 +26,14 @@ class SaltTestData:
     aSigPub = bytes.fromhex('5529ce8ccf68c0b8ac19d437ab0f5b32723782608e93c6264f184ba152c2357b')
     aSigSec = bytes.fromhex('55f4d1d198093c84de9ee9a6299e0f6891c2e1d0b369efb592a9e3f169fb0f79') + aSigPub
 
-    aEncSec = bytes( [
+    aEncSec = bytes([
         0x77, 0x07, 0x6d, 0x0a, 0x73, 0x18, 0xa5, 0x7d,
         0x3c, 0x16, 0xc1, 0x72, 0x51, 0xb2, 0x66, 0x45,
         0xdf, 0x4c, 0x2f, 0x87, 0xeb, 0xc0, 0x99, 0x2a,
         0xb1, 0x77, 0xfb, 0xa5, 0x1d, 0xb9, 0x2c, 0x2a,
     ])
 
-    aEncPub = bytes( [
+    aEncPub = bytes([
         0x85, 0x20, 0xf0, 0x09, 0x89, 0x30, 0xa7, 0x54,
         0x74, 0x8b, 0x7d, 0xdc, 0xb4, 0x3e, 0xf7, 0x5a,
         0x0d, 0xbf, 0x3a, 0x0d, 0x26, 0x38, 0x1a, 0xf4,
@@ -134,7 +134,7 @@ class TestSaltLib(BaseTest):
 
                 # break the signature
                 badsm = bytes([1]) + bytearray(sm[1:])
-                with self.assertRaises(BadSignatureException) as cm:
+                with self.assertRaises(saltchannel.saltlib.BadSignatureException) as cm:
                     api.crypto_sign_open(badsm, pk)
 
     def test_crypto_box_beforenm(self):
@@ -168,7 +168,7 @@ class TestSaltLib(BaseTest):
                 _c2 = bytearray(c)
                 _c2[-1] = ~_c2[-1] & 0xff
                 c2 = bytes(_c2)
-                with self.assertRaises(BadEncryptedDataException) as cm:
+                with self.assertRaises(saltchannel.saltlib.BadEncryptedDataException) as cm:
                     m3 = api.crypto_box_open_afternm(c2, n, k2)
 
 class BenchSaltLib:

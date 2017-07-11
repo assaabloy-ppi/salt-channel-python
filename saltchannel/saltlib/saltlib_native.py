@@ -3,10 +3,8 @@
 import ctypes
 import ctypes.util
 
-from saltchannel.util.py import Singleton
-from saltchannel.saltlib.saltlib_base import SaltLibBase
-from saltchannel.saltlib.saltlib_base import BadSignatureException
-from saltchannel.saltlib.saltlib_base import BadEncryptedDataException
+from .saltlib_base import SaltLibBase
+from .exceptions import BadEncryptedDataException, BadSignatureException
 
 sodium = ctypes.cdll.LoadLibrary(ctypes.util.find_library('sodium'))
 
@@ -15,7 +13,7 @@ def wrap(code):
         raise ValueError("libsodium returned ", code)
 
 
-class SaltLibNative(SaltLibBase, metaclass=Singleton):
+class SaltLibNative(SaltLibBase):
 
     @staticmethod
     def _getSodium():

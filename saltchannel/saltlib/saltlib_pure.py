@@ -1,15 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from saltchannel.saltlib.pure_pynacl import TypeEnum, integer, Int, IntArray
-from saltchannel.saltlib.pure_pynacl import tweetnacl
-from saltchannel.saltlib.pure_pynacl.tweetnacl import u8
+from .pure_pynacl import TypeEnum, integer, Int, IntArray
+from .pure_pynacl import tweetnacl
+from .pure_pynacl.tweetnacl import u8
 
-from saltchannel.util.py import Singleton
-from saltchannel.saltlib.saltlib_base import SaltLibBase
-from saltchannel.saltlib.saltlib_base import BadSignatureException
-from saltchannel.saltlib.saltlib_base import BadEncryptedDataException
+from .saltlib_base import SaltLibBase
 
-class SaltLibPure(SaltLibBase, metaclass=Singleton):
+class SaltLibPure(SaltLibBase):
 
     @staticmethod
     def isAvailable():
