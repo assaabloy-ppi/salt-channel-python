@@ -92,7 +92,7 @@ class M1Packet(Packet):
     def from_bytes(self, src):
         self.data.from_bytes(src)
         if self.data.Header.TicketIncluded == 1 and self.data.TicketSize != 0:
-            self.Ticket = bytes(src[sizeof(self.data):sizeof(self.data) + self.data.TicketSize])
+            self.Ticket = bytes(src[sizeof(self.data):sizeof(self.data) + self.data.TicketSize[0]])
 
     @property
     def size(self):
