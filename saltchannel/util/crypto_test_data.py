@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from saltchannel.util.key_pair import  KeyPair
+from saltchannel.util.key_pair import KeyPair
 
 
 class CryptoTestData:
