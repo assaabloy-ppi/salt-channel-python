@@ -22,6 +22,7 @@ class PacketType(Enum):
 
 class SmartStructure(LittleEndianStructure):
     _pack_ = 1
+
     def __init__(self, **kwargs):
         values = dict()
         try:
@@ -46,14 +47,32 @@ class SmartStructure(LittleEndianStructure):
 
 
 class Packet:
+    """Abstract packet with fixed field set and optional part (self.opt)"""
+
     class _EmptyBodyOpt(SmartStructure):
         _fields_ = []
 
     def _opt_factory(self, body=None):
-        return None
+        return Packet._EmptyBodyOpt()
 
     def create_opt_fields(self):
         self.opt = self._opt_factory(body=self.data)
+
+    def __init__(self):
+        self.opt = self._opt_factory(body=None)
+
+    def __bytes__(self):
+        return b''.join([bytes(self.data), bytes(self.opt)])
+
+    def from_bytes(self, src):
+        self.data.from_bytes(src)
+        self.opt = self._opt_factory(body=self.data)
+        self.opt.from_bytes(src[self.data.size:])
+
+    @property
+    def size(self):
+        """Returns size of packet when serialized to a bytearray."""
+        return len(self.data) + len(self.opt)
 
 
 class M1Packet(Packet):
@@ -100,9 +119,7 @@ class M1Packet(Packet):
         return b''.join([bytes(self.data), bytes(self.opt), self._ticket])
 
     def from_bytes(self, src):
-        self.data.from_bytes(src)
-        self.opt = self._opt_factory(body=self.data)
-        self.opt.from_bytes(src[self.data.size:])
+        super().from_bytes(src)
         if self.data.Header.TicketIncluded == 1 and self.opt.TicketSize != 0:
             offset = sizeof(self.data)+sizeof(self.opt)
             self._ticket = bytes(src[offset:offset + self.opt.TicketSize[0]])
@@ -142,4 +159,32 @@ class M1Packet(Packet):
         self.data.ClientEncKey = util.cbytes(value)
 
 
+class M2Packet(Packet):
+    """Data of the M2 message, low-level serialization/deserialization."""
 
+    class _M2PacketBody(SmartStructure):
+        class _M2PacketHeader(SmartStructure):
+            # M2 header fields
+            _fields_ = [('PacketType', c_uint8),
+                        ('NoSuchServer', c_uint8, 1),
+                        ('ResumeSupported', c_uint8, 1),
+                        ('_reserved', c_uint8, 6)]
+        # M2 body fields
+        _fields_ = [('Header', _M2PacketHeader),
+                    ('Time', c_uint32),
+                    ('ServerEncKey', c_uint8 * 32)]
+
+    def __init__(self, src_buf=None):
+        super().__init__()
+        self.data = M2Packet._M2PacketBody()
+        self.data.Header.PacketType = PacketType.TYPE_M2.value
+        if src_buf:
+            self.from_bytes(src_buf)
+
+    @property
+    def ServerEncKey(self):
+        return bytes(self.data.ServerEncKey)
+
+    @ServerEncKey.setter
+    def ServerEncKey(self, value):
+        self.data.ServerEncKey = util.cbytes(value)
