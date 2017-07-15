@@ -1,9 +1,9 @@
 from enum import Enum
-from abc import abstractmethod
 from ctypes import *
 
 from .exceptions import BadTicket
 import saltchannel.util as util
+
 
 class PacketType(Enum):
     """Packet type constants."""
@@ -45,53 +45,53 @@ class SmartStructure(LittleEndianStructure):
         return sizeof(self)
 
 
-class _M1OptDummy(SmartStructure):
-    _fields_ = [('ServerSigKey', c_uint8 * 0),
-                ('TicketSize', c_uint8 * 0)]
-
 class Packet:
+    class _EmptyBodyOpt(SmartStructure):
+        _fields_ = []
+
     def _opt_factory(self, body=None):
         return None
 
     def create_opt_fields(self):
         self.opt = self._opt_factory(body=self.data)
 
+
 class M1Packet(Packet):
     """Data of the M1 message, low-level serialization/deserialization."""
 
-    class _M1PacketHeader(SmartStructure):
-        # M1 header fields
-        _fields_ = [('PacketType', c_uint8),
-                    ('ServerSigKeyIncluded', c_uint8, 1),
-                    ('TicketIncluded', c_uint8, 1),
-                    ('TicketRequested', c_uint8, 1),
-                    ('_reserved', c_uint8, 5)]
+    class _M1PacketBody(SmartStructure):
+        class _M1PacketHeader(SmartStructure):
+            # M1 header fields
+            _fields_ = [('PacketType', c_uint8),
+                        ('ServerSigKeyIncluded', c_uint8, 1),
+                        ('TicketIncluded', c_uint8, 1),
+                        ('TicketRequested', c_uint8, 1),
+                        ('_reserved', c_uint8, 5)]
+        # M1 body fields
+        _fields_ = [('ProtocolIndicator', c_uint8 * 4),
+                    ('Header', _M1PacketHeader),
+                    ('Time', c_uint32),
+                    ('ClientEncKey', c_uint8 * 32)]
 
-    def _m1_body_factory(self, header, **kwargs):
-        class _M1PacketBody(SmartStructure):
-            # M1 body fields
-            _fields_ = [('ProtocolIndicator', c_uint8 * 4),
-                        ('Header', M1Packet._M1PacketHeader),
-                        ('Time', c_uint32),
-                        ('ClientEncKey', c_uint8 * 32)]
-
-            # M1 body fields defaults
-            _defaults_ = {
-                "ProtocolIndicator": util.cbytes(b'SCv2'),
-            }
-        return _M1PacketBody(**kwargs)
+        # M1 body fields defaults
+        _defaults_ = {
+            "ProtocolIndicator": util.cbytes(b'SCv2'),
+        }
 
     def _opt_factory(self, body=None):
+        if body is None:
+            return Packet._EmptyBodyOpt()
+
         class _M1PacketBodyOpt(SmartStructure):
             # M1 body opt fields
             _fields_ = [('ServerSigKey', c_uint8 * (32 * body.Header.ServerSigKeyIncluded)),
                         ('TicketSize', c_uint8 * (1 * body.Header.TicketIncluded))]
         return _M1PacketBodyOpt()
 
-    def __init__(self, src_buf=None, ticket=b'', **kwargs):
-        self.data = self._m1_body_factory(header=None, **kwargs)
+    def __init__(self, src_buf=None, ticket=b''):
+        self.data = M1Packet._M1PacketBody()
         self.data.Header.PacketType = PacketType.TYPE_M1.value
-        self.opt = _M1OptDummy()
+        self.opt = self._opt_factory()
         self._ticket = bytes(ticket)
         if src_buf:
             self.from_bytes(src_buf)
@@ -99,14 +99,13 @@ class M1Packet(Packet):
     def __bytes__(self):
         return b''.join([bytes(self.data), bytes(self.opt), self._ticket])
 
-
-
     def from_bytes(self, src):
         self.data.from_bytes(src)
         self.opt = self._opt_factory(body=self.data)
         self.opt.from_bytes(src[self.data.size:])
         if self.data.Header.TicketIncluded == 1 and self.opt.TicketSize != 0:
-            self._ticket = bytes(src[sizeof(self.data)+sizeof(self.opt):sizeof(self.data)+sizeof(self.opt) + self.opt.TicketSize[0]])
+            offset = sizeof(self.data)+sizeof(self.opt)
+            self._ticket = bytes(src[offset:offset + self.opt.TicketSize[0]])
 
     @property
     def size(self):
@@ -119,17 +118,19 @@ class M1Packet(Packet):
 
     @Ticket.setter
     def Ticket(self, value):
-        assert self.data.Header.TicketIncluded == 1
+        if self.data.Header.TicketIncluded != 1:
+            raise AttributeError("Header.TicketIncluded != 1. Please set it explicitly before create_opt_fields() call.")
         self._ticket = value
         self.opt.TicketSize = util.cbytes(bytes([len(value)]))
 
     @property
     def ServerSigKey(self):
-        return self.opt.ServerSigKey  # conversion from crypes Array to bytes ???
+        return bytes(self.opt.ServerSigKey)
 
     @ServerSigKey.setter
     def ServerSigKey(self, value):
-        assert self.data.Header.ServerSigKeyIncluded == 1
+        if self.data.Header.ServerSigKeyIncluded != 1:
+            raise AttributeError("Header.ServerSigKeyIncluded != 1. Please set it explicitly before create_opt_fields() call.")
         self.opt.ServerSigKey = util.cbytes(value)
 
     @property
