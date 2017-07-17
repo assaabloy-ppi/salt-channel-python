@@ -240,5 +240,22 @@ class TestM4(BaseTest):
         self.assertEqual(bytes(m4b), m4_dump)
 
 
+class TestEncryptedPacket(BaseTest):
+
+    def test_EncryptedPacket_properties(self):
+        e = packets.EncryptedPacket()
+
+        e.Body = CryptoTestData.random64a
+        self.assertEqual(e.Body, CryptoTestData.random64a)
+
+class TestAppPacket(BaseTest):
+
+    def test_AppPacket_properties(self):
+        app = packets.AppPacket()
+
+        app.Data = CryptoTestData.random64a
+        self.assertEqual(app.Data, CryptoTestData.random64a)
+
+
 if __name__ == '__main__':
     unittest.main()

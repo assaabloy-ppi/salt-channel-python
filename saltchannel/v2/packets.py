@@ -1,7 +1,10 @@
 from enum import Enum
 from ctypes import *
+from abc import ABCMeta
 
 from .exceptions import BadTicket
+from ..exceptions import BadPeer as BadPeer
+
 import saltchannel.util as util
 
 
@@ -11,8 +14,8 @@ class PacketType(Enum):
     TYPE_M2 = 2
     TYPE_M3 = 3
     TYPE_M4 = 4
-    TYPE_APP_MESSAGE = 5
-    TYPE_ENCRYPTED_MESSAGE = 6
+    TYPE_APP_PACKET = 5
+    TYPE_ENCRYPTED_PACKET = 6
     TYPE_TICKET = 7
     TYPE_A1 = 8
     TYPE_A2 = 9
@@ -46,7 +49,7 @@ class SmartStructure(LittleEndianStructure):
         return sizeof(self)
 
 
-class Packet:
+class Packet(metaclass=ABCMeta):
     """Abstract packet with fixed field set and optional part (self.opt)"""
 
     class _EmptyBodyOpt(SmartStructure):
@@ -55,8 +58,8 @@ class Packet:
     def _opt_factory(self, body=None):
         return Packet._EmptyBodyOpt()
 
-    def create_opt_fields(self):
-        self.opt = self._opt_factory(body=self.data)
+    def create_opt_fields(self, **kwargs):
+        self.opt = self._opt_factory(body=self.data, **kwargs)
 
     def __init__(self):
         self.opt = self._opt_factory(body=None)
@@ -64,10 +67,32 @@ class Packet:
     def __bytes__(self):
         return b''.join([bytes(self.data), bytes(self.opt)])
 
-    def from_bytes(self, src):
+    def validate(self):
+        """Check packet for consistency. Raise BadPeer() inside if something is wrong"""
+        if self.data.Header.PacketType != type(self).TYPE:
+            raise BadPeer("bad packet type: ", self.data.Header.PacketType)
+        #TODO: test data 0xdeadbeef should be changed to other value to pass this validation
+        #if self.data.Time > 0x7fffffff:
+        #    raise BadPeer("Time field range is invalid")
+
+    def from_bytes(self, src, validate=True):
         self.data.from_bytes(src)
         self.opt = self._opt_factory(body=self.data)
         self.opt.from_bytes(src[self.data.size:])
+        if validate:
+            self.validate()
+
+    def __getattr__(self, name):
+        if not isinstance(getattr(type(self), name, None), property):
+            return bytes(getattr(self.data, name))
+        else:
+            return object.__getattr__(self, name)
+
+    def __setattr__(self, name, value):
+        if name in ["data", "opt", "_ticket"] or isinstance(getattr(type(self), name, None), property):
+            super().__setattr__(name, value)
+        else:
+            setattr(self.data, name, util.cbytes(value))
 
     @property
     def size(self):
@@ -75,8 +100,10 @@ class Packet:
         return len(self.data) + len(self.opt)
 
 
+
 class M1Packet(Packet):
     """Data of the M1 message, low-level serialization/deserialization."""
+    TYPE = PacketType.TYPE_M1.value
 
     class _M1PacketBody(SmartStructure):
         class _M1PacketHeader(SmartStructure):
@@ -94,7 +121,7 @@ class M1Packet(Packet):
 
         # M1 body fields defaults
         _defaults_ = {
-            "ProtocolIndicator": util.cbytes(b'SCv2'),
+            "ProtocolIndicator": (util.cbytes(b'SCv2')),
         }
 
     def _opt_factory(self, body=None):
@@ -109,7 +136,7 @@ class M1Packet(Packet):
 
     def __init__(self, src_buf=None, ticket=b''):
         self.data = M1Packet._M1PacketBody()
-        self.data.Header.PacketType = PacketType.TYPE_M1.value
+        self.data.Header.PacketType = type(self).TYPE
         self.opt = self._opt_factory()
         self._ticket = bytes(ticket)
         if src_buf:
@@ -119,10 +146,19 @@ class M1Packet(Packet):
         return b''.join([bytes(self.data), bytes(self.opt), self._ticket])
 
     def from_bytes(self, src):
-        super().from_bytes(src)
+        super().from_bytes(src, validate=False)  # validate at the end of this method instead
         if self.data.Header.TicketIncluded == 1 and self.opt.TicketSize != 0:
             offset = sizeof(self.data)+sizeof(self.opt)
             self._ticket = bytes(src[offset:offset + self.opt.TicketSize[0]])
+        self.validate()
+
+    def validate(self):
+        """Check packet for consistency. Raise BadPeer() inside if something is wrong"""
+        super().validate()
+        if self.data.ProtocolIndicator[:] != self.data._defaults_['ProtocolIndicator'][:]:
+            raise BadPeer("unexpected ProtocolIndicator: ", bytes(self.data.ProtocolIndicator))
+        if self.data.Header.TicketIncluded == 1 and self.opt.TicketSize[0] > 127:
+            raise BadPeer("bad TicketSize", self.opt.TicketSize)
 
     @property
     def size(self):
@@ -150,17 +186,10 @@ class M1Packet(Packet):
             raise AttributeError("Header.ServerSigKeyIncluded != 1. Please set it explicitly before create_opt_fields() call.")
         self.opt.ServerSigKey = util.cbytes(value)
 
-    @property
-    def ClientEncKey(self):
-        return bytes(self.data.ClientEncKey)
-
-    @ClientEncKey.setter
-    def ClientEncKey(self, value):
-        self.data.ClientEncKey = util.cbytes(value)
-
 
 class M2Packet(Packet):
     """Data of the M2 message, low-level serialization/deserialization."""
+    TYPE = PacketType.TYPE_M2.value
 
     class _M2PacketBody(SmartStructure):
         class _M2PacketHeader(SmartStructure):
@@ -177,21 +206,14 @@ class M2Packet(Packet):
     def __init__(self, src_buf=None):
         super().__init__()
         self.data = M2Packet._M2PacketBody()
-        self.data.Header.PacketType = PacketType.TYPE_M2.value
+        self.data.Header.PacketType = type(self).TYPE
         if src_buf:
             self.from_bytes(src_buf)
-
-    @property
-    def ServerEncKey(self):
-        return bytes(self.data.ServerEncKey)
-
-    @ServerEncKey.setter
-    def ServerEncKey(self, value):
-        self.data.ServerEncKey = util.cbytes(value)
 
 
 class M3Packet(Packet):
     """Data of the M3 message, low-level serialization/deserialization."""
+    TYPE = PacketType.TYPE_M3.value
 
     class _M3PacketBody(SmartStructure):
         class _M3PacketHeader(SmartStructure):
@@ -207,29 +229,14 @@ class M3Packet(Packet):
     def __init__(self, src_buf=None):
         super().__init__()
         self.data = M3Packet._M3PacketBody()
-        self.data.Header.PacketType = PacketType.TYPE_M3.value
+        self.data.Header.PacketType = type(self).TYPE
         if src_buf:
             self.from_bytes(src_buf)
-
-    @property
-    def ServerSigKey(self):
-        return bytes(self.data.ServerSigKey)
-
-    @ServerSigKey.setter
-    def ServerSigKey(self, value):
-        self.data.ServerSigKey = util.cbytes(value)
-
-    @property
-    def Signature1(self):
-        return bytes(self.data.Signature1)
-
-    @Signature1.setter
-    def Signature1(self, value):
-        self.data.Signature1 = util.cbytes(value)
 
 
 class M4Packet(Packet):
     """Data of the M4 message, low-level serialization/deserialization."""
+    TYPE = PacketType.TYPE_M4.value
 
     class _M4PacketBody(SmartStructure):
         class _M4PacketHeader(SmartStructure):
@@ -245,22 +252,89 @@ class M4Packet(Packet):
     def __init__(self, src_buf=None):
         super().__init__()
         self.data = M4Packet._M4PacketBody()
-        self.data.Header.PacketType = PacketType.TYPE_M4.value
+        self.data.Header.PacketType = type(self).TYPE
+        if src_buf:
+            self.from_bytes(src_buf)
+
+
+class EncryptedPacket(Packet):
+    """Encrypted container for M3/M4/AppPacket. """
+    TYPE = PacketType.TYPE_ENCRYPTED_PACKET.value
+
+    class _EncryptedPacketBody(SmartStructure):
+        class _EncryptedPacketHeader(SmartStructure):
+            # EncryptedPacket header fields
+            _fields_ = [('PacketType', c_uint8),
+                        ('_reserved', c_uint8)]
+        # EncryptedPacket body fields
+        _fields_ = [('Header', _EncryptedPacketHeader)]
+
+    def _opt_factory(self, body=None, body_msg_size=0):
+        if body is None:
+            return Packet._EmptyBodyOpt()
+
+        class _EncryptedPacketBodyOpt(SmartStructure):
+            # EncryptedPacket opt/variable fields
+            _fields_ = [('Body', c_uint8 * body_msg_size)]
+        return _EncryptedPacketBodyOpt()
+
+    def __init__(self, src_buf=None):
+        super().__init__()
+        self.data = EncryptedPacket._EncryptedPacketBody()
+        self.data.Header.PacketType = type(self).TYPE
+        self.opt = self._opt_factory()
+        if src_buf:
+            self.from_bytes(src_buf)
+
+    def validate(self):
+        super().validate()
+        if len(self.Body) < 16:
+            raise BadPeer("'Body' field value is too small")
+
+    @property
+    def Body(self):
+        return bytes(self.opt.Body)
+
+    @Body.setter
+    def Body(self, value):
+        self.create_opt_fields(body_msg_size=len(bytes(value)))   # maybe need to optimize this
+        self.opt.Body = util.cbytes(value)
+
+
+class AppPacket(Packet):
+    TYPE = PacketType.TYPE_APP_PACKET.value
+
+    class _AppPacketBody(SmartStructure):
+        class _AppPacketHeader(SmartStructure):
+            # AppPacket header fields
+            _fields_ = [('PacketType', c_uint8),
+                        ('_reserved', c_uint8)]
+        # AppPacket body fields
+        _fields_ = [('Header', _AppPacketHeader),
+                    ('Time', c_uint32)]
+
+    def _opt_factory(self, body=None, data_msg_size=0):
+        if body is None:
+            return Packet._EmptyBodyOpt()
+
+        class _AppPacketBodyOpt(SmartStructure):
+            # AppPacket opt/variable fields
+            _fields_ = [('Data', c_uint8 * data_msg_size)]
+        return _AppPacketBodyOpt()
+
+    def __init__(self, src_buf=None):
+        super().__init__()
+        self.data = AppPacket._AppPacketBody()
+        self.data.Header.PacketType = type(self).TYPE
+        self.opt = self._opt_factory()
         if src_buf:
             self.from_bytes(src_buf)
 
     @property
-    def ClientSigKey(self):
-        return bytes(self.data.ClientSigKey)
+    def Data(self):
+        return bytes(self.opt.Data)
 
-    @ClientSigKey.setter
-    def ClientSigKey(self, value):
-        self.data.ClientSigKey = util.cbytes(value)
-
-    @property
-    def Signature2(self):
-        return bytes(self.data.Signature2)
-
-    @Signature2.setter
-    def Signature2(self, value):
-        self.data.Signature2 = util.cbytes(value)
+    @Data.setter
+    def Data(self, value):
+        self.create_opt_fields(data_msg_size=len(bytes(value)))   # maybe need to optimize this
+        self.opt.Data = util.cbytes(value)
