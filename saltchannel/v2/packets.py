@@ -188,3 +188,79 @@ class M2Packet(Packet):
     @ServerEncKey.setter
     def ServerEncKey(self, value):
         self.data.ServerEncKey = util.cbytes(value)
+
+
+class M3Packet(Packet):
+    """Data of the M3 message, low-level serialization/deserialization."""
+
+    class _M3PacketBody(SmartStructure):
+        class _M3PacketHeader(SmartStructure):
+            # M3 header fields
+            _fields_ = [('PacketType', c_uint8),
+                        ('_reserved', c_uint8)]
+        # M3 body fields
+        _fields_ = [('Header', _M3PacketHeader),
+                    ('Time', c_uint32),
+                    ('ServerSigKey', c_uint8 * 32),
+                    ('Signature1', c_uint8 * 64)]
+
+    def __init__(self, src_buf=None):
+        super().__init__()
+        self.data = M3Packet._M3PacketBody()
+        self.data.Header.PacketType = PacketType.TYPE_M3.value
+        if src_buf:
+            self.from_bytes(src_buf)
+
+    @property
+    def ServerSigKey(self):
+        return bytes(self.data.ServerSigKey)
+
+    @ServerSigKey.setter
+    def ServerSigKey(self, value):
+        self.data.ServerSigKey = util.cbytes(value)
+
+    @property
+    def Signature1(self):
+        return bytes(self.data.Signature1)
+
+    @Signature1.setter
+    def Signature1(self, value):
+        self.data.Signature1 = util.cbytes(value)
+
+
+class M4Packet(Packet):
+    """Data of the M4 message, low-level serialization/deserialization."""
+
+    class _M4PacketBody(SmartStructure):
+        class _M4PacketHeader(SmartStructure):
+            # M4 header fields
+            _fields_ = [('PacketType', c_uint8),
+                        ('_reserved', c_uint8)]
+        # M3 body fields
+        _fields_ = [('Header', _M4PacketHeader),
+                    ('Time', c_uint32),
+                    ('ClientSigKey', c_uint8 * 32),
+                    ('Signature2', c_uint8 * 64)]
+
+    def __init__(self, src_buf=None):
+        super().__init__()
+        self.data = M4Packet._M4PacketBody()
+        self.data.Header.PacketType = PacketType.TYPE_M4.value
+        if src_buf:
+            self.from_bytes(src_buf)
+
+    @property
+    def ClientSigKey(self):
+        return bytes(self.data.ClientSigKey)
+
+    @ClientSigKey.setter
+    def ClientSigKey(self, value):
+        self.data.ClientSigKey = util.cbytes(value)
+
+    @property
+    def Signature2(self):
+        return bytes(self.data.Signature2)
+
+    @Signature2.setter
+    def Signature2(self, value):
+        self.data.Signature2 = util.cbytes(value)

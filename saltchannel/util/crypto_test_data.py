@@ -64,5 +64,7 @@ class CryptoTestData:
                    pub=bytes.fromhex("6230d0df1a5069548447978c107b378ca88179c3799fb99df1007141fc173712")
                    )
 
-    random32a = bytes.fromhex("491cbc6d62351b396c8121a077e739f7764992f30be24a9b25ddedc3d68388c6")
+
     random16a = bytes.fromhex("d69e8040a8f8a22c39071060211845bd")
+    random32a = bytes.fromhex("491cbc6d62351b396c8121a077e739f7764992f30be24a9b25ddedc3d68388c6")
+    random64a = bytes.fromhex("be3552a308cd05afd2943030a5a582259875d00ab313a7f6d8a8fc6bf3af4732491cbc6d62351b396c8121a077e739f7764992f30be24a9b25ddedc3d68388c6")
