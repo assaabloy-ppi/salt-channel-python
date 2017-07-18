@@ -53,3 +53,6 @@ class SaltLibBase(metaclass=SingletonABCMeta):
 
     @abstractmethod
     def crypto_hash(self, m):  pass
+
+    @abstractmethod
+    def randombytes(self, n):  pass

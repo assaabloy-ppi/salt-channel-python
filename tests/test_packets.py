@@ -4,6 +4,8 @@ import unittest
 from unittest import TestCase
 
 import saltchannel.v2.exceptions
+from saltchannel.exceptions import BadPeer
+
 import saltchannel.v2.packets as packets
 
 from saltchannel.util.crypto_test_data import CryptoTestData
@@ -255,6 +257,14 @@ class TestAppPacket(BaseTest):
 
         app.Data = CryptoTestData.random64a
         self.assertEqual(app.Data, CryptoTestData.random64a)
+
+    def test_AppPacket_invalid_input(self):
+        app = packets.AppPacket()
+        with self.assertRaises(BadPeer) as cm:
+            app.from_bytes(bytes(1))
+
+        with self.assertRaises(BadPeer) as cm:
+            app.from_bytes(bytes(5))
 
 
 if __name__ == '__main__':

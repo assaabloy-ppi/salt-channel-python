@@ -169,3 +169,7 @@ class SaltLibNative(SaltLibBase):
         h = ctypes.create_string_buffer(sodium.crypto_hash_sha512_bytes()).raw
         wrap(sodium.crypto_hash_sha512(h, m, ctypes.c_ulonglong(len(m))))
         return h
+
+
+    def randombytes(self, n):
+        return sodium.randombytes(n)

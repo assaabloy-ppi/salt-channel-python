@@ -64,3 +64,6 @@ class SaltLibPyNaCl(SaltLibBase):
     # ret: h
     def crypto_hash(self, m):
         return bindings.crypto_hash(m)
+
+    def randombytes(self, n):
+        return bindings.randombytes(n)

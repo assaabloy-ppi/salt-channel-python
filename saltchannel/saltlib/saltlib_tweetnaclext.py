@@ -52,3 +52,6 @@ class SaltLibTweetNaClExt(SaltLibBase):
     # ret: h
     def crypto_hash(self, m):
         return tweetnacl.crypto_hash(m)
+
+    def randombytes(self, n):
+        return tweetnacl.randombytes(n)

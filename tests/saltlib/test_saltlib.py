@@ -12,7 +12,9 @@ from saltchannel.saltlib.saltlib_base import SaltLibBase
 from saltchannel.saltlib.saltlib_native import SaltLibNative
 from saltchannel.saltlib.saltlib_pynacl import SaltLibPyNaCl
 from saltchannel.saltlib.saltlib_tweetnaclext import SaltLibTweetNaClExt
-#from saltchannel.saltlib.saltlib_pure import SaltLibPure
+from saltchannel.saltlib.saltlib import SaltLib, LibType, RngType
+
+from saltchannel.util.crypto_test_data import CryptoTestData
 
 naclapi_map = {
             '1. SaltLibNative': SaltLibNative(),
@@ -170,6 +172,60 @@ class TestSaltLib(BaseTest):
                 c2 = bytes(_c2)
                 with self.assertRaises(saltchannel.saltlib.BadEncryptedDataException) as cm:
                     m3 = api.crypto_box_open_afternm(c2, n, k2)
+
+    def test_urandom(self):
+        for t in LibType:
+            SaltLib(lib_type=t, rand_type=RngType.RNG_URANDOM)
+            bytes1 = SaltLib.random_bytes(128)
+            bytes2 = SaltLib.random_bytes(128)
+            self.assertEqual(len(bytes1), len(bytes2))
+            self.assertNotEqual(bytes1, bytes2)
+
+            SaltLib(lib_type=t, rand_type=RngType.RNG_IMPL)
+            bytes1 = SaltLib.random_bytes(128)
+            bytes2 = SaltLib.random_bytes(128)
+            self.assertEqual(len(bytes1), len(bytes2))
+            self.assertNotEqual(bytes1, bytes2)
+
+    def test_create_sig_keys_from_sec(self):
+        for t in LibType:
+            for rng in RngType:
+                with self.subTest(name=" ".join([str(t), str(rng)])):
+                    lib = SaltLib(lib_type=t, rand_type=rng)
+                    sig = lib.create_sig_keys_from_sec(CryptoTestData.aSig.sec)
+                    self.assertEqual(CryptoTestData.aSig.sec, sig.sec)
+                    self.assertEqual(CryptoTestData.aSig.pub, sig.pub)
+
+    def test_create_enc_keys_from_sec(self):
+        for t in LibType:
+            for rng in RngType:
+                with self.subTest(name=" ".join([str(t), str(rng)])):
+                    lib = SaltLib(lib_type=t, rand_type=rng)
+                    enc = lib.create_enc_keys_from_sec(CryptoTestData.aEnc.sec)
+                    self.assertEqual(CryptoTestData.aEnc.sec, enc.sec)
+                    self.assertEqual(CryptoTestData.aEnc.pub, enc.pub)
+
+    def test_sign(self):
+        for t in LibType:
+            for rng in RngType:
+                with self.subTest(name=" ".join([str(t), str(rng)])):
+                    lib = SaltLib(lib_type=t, rand_type=rng)
+                    data1 = bytes([1, 2, 3])
+                    signed = lib.sign(data1, CryptoTestData.aSig.sec)
+                    data2 = lib.sign_open(signed, CryptoTestData.aSig.pub)
+                    self.assertEqual(data1, data2)
+
+    def test_encrypt_decrypt(self):
+        for t in LibType:
+            for rng in RngType:
+                with self.subTest(name=" ".join([str(t), str(rng)])):
+                    lib = SaltLib(lib_type=t, rand_type=rng)
+                    txt = b"hello world"
+                    key = os.urandom(lib.api.crypto_box_SHAREDKEYBYTES)
+                    nonce = os.urandom(lib.api.crypto_box_NONCEBYTES)
+                    encrypted = lib.encrypt(key, nonce, txt)
+                    clear = lib.decrypt(key, nonce, encrypted)
+                    self.assertEqual(txt, clear)
 
 class BenchSaltLib:
 
