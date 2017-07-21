@@ -1,7 +1,7 @@
 import sys
 
 if sys.version_info[0] < 3:
-    print "Python version " + str(sys.version_info[0]) +" is not supported. Minimal is Python 3.4"
+    print("".join(["Python version ", str(sys.version_info[0]), " is not supported. Minimal is Python 3.4"]))
     exit(1)
 
 from setuptools import setup, find_packages

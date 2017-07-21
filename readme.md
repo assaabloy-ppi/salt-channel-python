@@ -8,13 +8,21 @@ WORK IN PROGRESS..
 
 Usage
 ======
+
+Quick start. Let's see what we can do right now?
+
+`make`
+
+
 Running unit tests:
     
-`python3 setup.py test`
+`make test`
+
 
 Running benchmarking suite for 'saltlib':
      
-`python3 setup.py benchmark_saltlib`
+`make benchmark_saltlib`
+
 
 
 Package 'saltlib'
