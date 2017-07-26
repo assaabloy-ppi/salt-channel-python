@@ -3,7 +3,9 @@ Byte arrays can be read and written; a simple blocking model.
 """
 import io
 import socket
+import codecs
 import struct
+import traceback
 from abc import ABCMeta, abstractmethod
 
 from .exceptions import ComException, BadPeer
@@ -26,21 +28,25 @@ class ByteChannel(metaclass=ABCMeta):
 class StreamChannel(ByteChannel):
     """A ByteChannel implementation based on a pair of streams."""
 
-    def __init__(self, in_stream, out_stream):
-        self.io = io.BufferedRWPair(in_stream, out_stream)
+    def __init__(self, in_stream, out_stream=None):
+        if not out_stream:
+            self.io = in_stream
+        else:
+            self.io = io.BufferedRWPair(in_stream, out_stream)
 
     def read(self):
         try:
-            size_prefix = struct.unpack('<i', self.io.read(size=4))
-            if size_prefix < 0:
-                raise BadPeer("non-positive packet size, ", size_prefix)
-            return self.io.read(size=size_prefix)
+           len_buf = self.io.read(4)
+           if not len_buf:
+               raise ComException("Unable to recv size prefix. NOT all requested data were obtained")
+           msg_len = struct.unpack('<i', len_buf)
+           msg = self.io.read(msg_len[0])
         except IOError as e:
             raise ComException(e)
 
     def write(self, message, *args):
         try:
-            for msg in message + args:
+            for msg in (message,) + args:
                 mbytes = bytes(msg)
                 self.io.write(struct.pack('<i', len(mbytes)))
                 self.io.write(mbytes)
@@ -49,11 +55,45 @@ class StreamChannel(ByteChannel):
             raise ComException(e)
 
 
-class SocketChannel(StreamChannel):
+class SocketChannel(ByteChannel):
     def __init__(self, sock):
-        self.io = io.BufferedRWPair(sock.makefile('rb', bufsize=0), sock.makefile('wb', bufsize=0))
+        #self.io = io.BufferedRWPair(sock.makefile('rb'), sock.makefile('wb'))
+        self.sock = sock
+
+    def read(self):
+        try:
+           #size_prefix = struct.unpack('<i', self.sock.recv(4))
+           #if size_prefix[0] < 0:
+           #    raise BadPeer("non-positive packet size, ", size_prefix[0])
+           #return self.sock.recv(size_prefix[0])
+           len_buf, success = self.recvall(4)
+           if not success:
+               raise ComException("Unable to recv size prefix. NOT all requested data were obtained")
+           msg_len = struct.unpack('<i', len_buf)
+           msg, success = self.recvall(msg_len[0])
+           if not success:
+               raise ComException("Unable to recv msg. NOT all requested data were obtained")
+           return msg
+        except Exception as e:
+            raise ComException(e)
+
+    def write(self, message, *args):
+        try:
+            for msg in (message,) + args:
+                self.sock.sendall(b''.join([struct.pack('<i', len(msg)), bytes(msg)]))
+        except Exception as e:
+            raise ComException(e)
+
+    def recvall(self, count):
+        buf = b''
+        while count:
+            newbuf = self.sock.recv(count)
+            if not newbuf: return (buf, False)
+            buf += newbuf
+            count -= len(newbuf)
+        return (buf, True)
 
 
 class PipeChannel(ByteChannel):
     """ByteChannel implementation based on 'multiprocessing' module's Pipes"""
-    raise NotImplementedError("PipeChannel is not implemented")
+    pass

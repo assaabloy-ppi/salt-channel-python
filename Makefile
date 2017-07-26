@@ -31,8 +31,8 @@ _virtualenv:
 	_virtualenv/bin/pip install --upgrade pip
 	_virtualenv/bin/pip install --upgrade setuptools
 
-run_echo_session: ## Run session 'dev/EchoSession.py' within local client & server connected with ByteChannel
-	python3 -m saltchannel.dev.run_session  MpClientServerPair  EchoSession
+run_simple_echo_session: ## Run session 'dev/SimpleEchoSession.py' within local client & server connected with ByteChannel
+	python3 -m saltchannel.dev.run_session  MpClientServerPair  SimpleEchoSession
 
-asyncrun_echo_session: ## Run asyncio version of 'run_echo_session' target
-	python3 -m saltchannel.dev.run_session  AsyncMpClientServerPair  AsyncEchoSession
+run_simple_echo_session_a: ## Run asyncio version of 'run_simple_echo_session' target
+	python3 -m saltchannel.dev.run_session_a

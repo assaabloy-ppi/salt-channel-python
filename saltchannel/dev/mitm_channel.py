@@ -20,9 +20,9 @@ class MitmChannel:
     class LogRecord(namedtuple('LogRecord', ['time', 'type', 'data'])):
         __slots__ = ()
 
-    def __init__(self, orig, logger=None):
+    def __init__(self, orig, log=None):
         self.orig = orig
-        self.logger = logger
+        self.log = log
         self.queue = deque()
         self.time0 = 0
         self.log_buffering = False
@@ -36,23 +36,23 @@ class MitmChannel:
         if not self.time0:
             self.time0 = log_record.time
         if force_log or not self.log_buffering:
-            if self.logger:
-                self.logger('{:0.6f} +{:0.6f}, {:s}, len(msg):{:d}, msg:"{:s}"'
-                            .format(log_record.time, log_record.time-self.time0, log_record.type, len(log_record.data),
-                                    codecs.encode(log_record.data, 'hex')))
+            if self.log:
+                self.log.info('{:0.6f} +{:0.6f}, {:s}, len(msg):{:d}, msg: b\'{:s}\''
+                            .format(log_record.time, log_record.time-self.time0, log_record.type,
+                                    len(log_record.data), log_record.data.hex()))
             else:
                 self.queue.append(log_record)
         self.time0 = log_record.time
 
     def read(self):
         data = self.orig.read()
-        if self.logger:
+        if self.log:
             self._log_event(MitmChannel.LogRecord(time=time.perf_counter(), type=MitmEventType.READ, data=data))
         return data
 
     def write(self, msg, *args):
         self.orig.write(msg, *args)
-        if self.logger:
+        if self.log:
             self._log_event(MitmChannel.LogRecord(time=time.perf_counter(), type=MitmEventType.WRITE, data=msg))
             for m in args:
                 self._log_event(MitmChannel.LogRecord(time=time.perf_counter(), type=MitmEventType.WRITE_WITH_PREVIOUS, data=m))
