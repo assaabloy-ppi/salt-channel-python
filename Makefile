@@ -20,16 +20,16 @@ benchmark_saltlib: ## Run SaltLib benchmarking suite
 
 
 bootstrap: _virtualenv
-	_virtualenv/bin/pip install -e .
+	_virtualenv/bin/pip3 install -e .
 ifneq ($(wildcard test-requirements.txt),)
-	_virtualenv/bin/pip install -r test-requirements.txt
+	_virtualenv/bin/pip3 install -r test-requirements.txt
 endif
 	make clean
 
 _virtualenv:
 	virtualenv _virtualenv
-	_virtualenv/bin/pip install --upgrade pip
-	_virtualenv/bin/pip install --upgrade setuptools
+	_virtualenv/bin/pip3 install --upgrade pip
+	_virtualenv/bin/pip3 install --upgrade setuptools
 
 run_simple_echo_session: ## Run session 'dev/SimpleEchoSession.py' within local client & server connected with ByteChannel
 	python3 -m saltchannel.dev.run_session  MpClientServerPair  SimpleEchoSession

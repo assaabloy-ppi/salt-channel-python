@@ -338,3 +338,7 @@ class AppPacket(Packet):
     def Data(self, value):
         self.create_opt_fields(data_msg_size=len(bytes(value)))   # maybe need to optimize this
         self.opt.Data = util.cbytes(value)
+
+
+class TTPacket(Packet):
+    SESSION_NONCE_SIZE = 8
