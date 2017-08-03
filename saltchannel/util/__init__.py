@@ -4,7 +4,7 @@ import ctypes
 from abc import ABCMeta
 
 def cbytes(src):
-    """Convert bytes-like array to list ctypes array of c_uint8."""
+    """Convert bytes-like array to ctypes array of c_uint8."""
     return (ctypes.c_uint8 * len(bytes(src)))(*list((bytes(src))))
 
 class Singleton(type):

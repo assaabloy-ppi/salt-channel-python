@@ -39,19 +39,26 @@ class EncryptedChannelV2(ByteChannel):
     encrypted properly."""
 
     def __init__(self, channel, key, role, session_nonce=bytes(TTPacket.SESSION_NONCE_SIZE)):
-        self.saltlib = SaltLib.getLib()
+        self.saltlib = SaltLib().getLib()  # refactor to self.salt ?
 
         if len(key) != self.saltlib.crypto_box_SECRETKEYBYTES:
             raise ValueError("bad key size, should be " + self.saltlib.crypto_box_SECRETKEYBYTES)
 
         self.key = key
         self.channel = channel
+        self.pushback_msg = b''  # used for Resume feature when happens just read chunk is encrypted
 
         self.read_nonce = Nonce(NonceType.READ, session_nonce, value= 2 if role == Role.CLIENT else 1)
         self.write_nonce = Nonce(NonceType.WRITE, session_nonce, value= 1 if role == Role.CLIENT else 2)
 
     def read(self):
-        clear = self.decrypt(self.unwrap(self.channel.read()))
+        if self.pushback_msg:
+            raw = self.pushback_msg
+            self.pushback_msg = None
+        else:
+            raw = self.channel.read()
+
+        clear = self.decrypt(self.unwrap(raw))
         self.read_nonce.advance()
         return clear
 

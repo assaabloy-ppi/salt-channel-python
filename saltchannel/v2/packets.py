@@ -342,3 +342,4 @@ class AppPacket(Packet):
 
 class TTPacket(Packet):
     SESSION_NONCE_SIZE = 8
+
