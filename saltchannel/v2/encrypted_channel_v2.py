@@ -1,8 +1,8 @@
 from enum import Enum
 
-from saltlib import SaltLib
-from saltlib import BadEncryptedDataException, BadSignatureException
-from channel import ByteChannel
+from ..saltlib import SaltLib
+from ..saltlib import BadEncryptedDataException, BadSignatureException
+from ..channel import ByteChannel
 from .packets import EncryptedPacket, TTPacket
 from ..exceptions import BadPeer
 

@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from . import SingletonABCMeta
-from exceptions import BadPeer
+from ..exceptions import BadPeer
 
 
 class TimeKeeper(metaclass=SingletonABCMeta):

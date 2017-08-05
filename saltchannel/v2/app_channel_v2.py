@@ -1,4 +1,4 @@
-from channel import ByteChannel
+from ..channel import ByteChannel
 from .packets import AppPacket
 
 
