@@ -1,10 +1,10 @@
 from ..saltlib import SaltLib
-from util.time import NullTimeChecker, NullTimeKeeper
-from util.key_pair import KeyPair
+from ..util.time import NullTimeChecker, NullTimeKeeper
+from ..util.key_pair import KeyPair
 from . import packets
 from . import ticket
-import exceptions
-import saltlib.exceptions
+#import exceptions
+import saltchannel.saltlib.exceptions
 from .encrypted_channel_v2 import EncryptedChannelV2, Role
 from .app_channel_v2 import AppChannelV2
 

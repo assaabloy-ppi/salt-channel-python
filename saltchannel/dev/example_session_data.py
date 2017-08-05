@@ -1,6 +1,5 @@
 """Example session data; used as an appendix to theSalt Channel v2 specification.
 An executable class that outputs data needed to reproduce a simple Salt Channel session."""
-
 import os
 import sys
 import logging
@@ -9,21 +8,18 @@ import codecs
 import functools
 
 from saltchannel.v2.salt_client_session import SaltClientSession
-#from saltchannel.v2.salt_server_session import SaltServerSession
+from saltchannel.v2.salt_server_session import SaltServerSession
 from .tunnel import Tunnel
 from saltchannel.util.crypto_test_data import CryptoTestData
-
+from saltchannel.dev.client_server import MpClientServerPair
+from .client_server import Session
+from saltchannel.exceptions  import ComException
 
 # Log all to stdout
 handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(logging.Formatter("%(relativeCreated)06d - pid:%(process)s - %(message)s"))
 logging.getLogger().addHandler(handler)
 logging.getLogger().setLevel(logging.INFO)
-
-from saltchannel.dev.client_server import MpClientServerPair
-from saltchannel.dev.simple_echo_session import SimpleEchoSession
-from .client_server import Session
-from saltchannel.exceptions  import ComException
 
 SESSION_NUM = 1
 
@@ -33,6 +29,7 @@ class ExampleSession(Session):
     https://github.com/assaabloy-ppi/salt-channel/blob/master/src/saltchannel/dev/ExampleSessionData.java"""
 
     def server_session(self, channel):
+        """Server side session implementation for basic handshake"""
         try:
             while True:
                 msg = channel.read()
@@ -43,6 +40,7 @@ class ExampleSession(Session):
             logging.info("Server detected closed connection")
 
     def client_session(self, channel):
+        """Client side session implementation for basic handshake"""
         data = os.urandom(6)
         data_str = codecs.encode(os.urandom(6), "hex")
         for i in range(1):
