@@ -36,7 +36,7 @@ class SaltClientSession:
         self.session_key = b''
 
         self.wanted_server_sig_key = b''
-        self.enc_keypair = KeyPair(sec=None, pub=None)
+        self.enc_keypair = None
         self.buffer_M4 = False
 
         self.m1 = None
@@ -92,11 +92,11 @@ class SaltClientSession:
             return (False, clear_chunk)  # it' not M2, falling back...
 
         # M2 processing
+        self.time_checker.report_first_time(self.m2.Time)
+        self.m2_hash = self.saltlib.sha512(clear_chunk)
         if self.m2.data.Header.NoSuchServer:
             raise exceptions.NoSuchServerException()
 
-        self.time_checker.report_first_time(self.m2.Time)
-        self.m2_hash = self.saltlib.sha512(bytes(self.m2))
         return (True, None)
 
     def tt1(self, raw_chunk):
