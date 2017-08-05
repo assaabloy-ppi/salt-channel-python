@@ -8,22 +8,22 @@ help: Makefile
 	@echo
 
 test: ## Run all unittests
-	python3 setup.py test
+	_virtualenv/bin/python3 setup.py test
 
 clean: ## Project cleanup
 	rm -f MANIFEST
 	rm -rf build dist
 
 benchmark_saltlib: ## Run SaltLib benchmarking suite
-	python3 setup.py benchmark_saltlib
+	_virtualenv/bin/python3 setup.py benchmark_saltlib
 
 
 
-bootstrap: _virtualenv
-	_virtualenv/bin/pip3 install -e .
-ifneq ($(wildcard test-requirements.txt),)
+bootstrap: _virtualenv ## Initialize virtual environment
+#ifneq ($(wildcard test-requirements.txt),)
 	_virtualenv/bin/pip3 install -r test-requirements.txt
-endif
+#endif
+	_virtualenv/bin/pip3 install -e .
 	make clean
 
 _virtualenv:
@@ -32,7 +32,10 @@ _virtualenv:
 	_virtualenv/bin/pip3 install --upgrade setuptools
 
 run_simple_echo_session: ## Run session 'dev/SimpleEchoSession.py' within local client & server connected with ByteChannel
-	python3 -m saltchannel.dev.run_session  MpClientServerPair  SimpleEchoSession
+	_virtualenv/bin/python3 -m saltchannel.dev.run_session  MpClientServerPair  SimpleEchoSession
 
 run_simple_echo_session_a: ## Run asyncio version of 'run_simple_echo_session' target
-	python3 -m saltchannel.dev.run_session_a
+	_virtualenv/bin/python3 -m saltchannel.dev.run_session_a
+
+run_example_session_data: ## Run 'dev/example_session_data.py' to dump basic hansdhake data
+	_virtualenv/bin/python3 -m saltchannel.dev.example_session_data

@@ -1,4 +1,4 @@
-from saltlib import SaltLib
+from ..saltlib import SaltLib
 from util.time import NullTimeChecker, NullTimeKeeper
 from util.key_pair import KeyPair
 from . import packets

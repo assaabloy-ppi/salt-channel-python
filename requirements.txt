@@ -1,0 +1,2 @@
+pynacl
+git+https://github.com/ppmag/python-tweetnacl.git#egg=tweetnacl

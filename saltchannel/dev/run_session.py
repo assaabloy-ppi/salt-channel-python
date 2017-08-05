@@ -1,15 +1,10 @@
 """
 
 """
-import os
 import sys
 import logging
 import timeit
 import functools
-import socket
-import threading
-import socketserver
-
 
 # Log all to stdout
 handler = logging.StreamHandler(sys.stdout)
