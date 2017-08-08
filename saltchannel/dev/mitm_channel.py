@@ -26,6 +26,8 @@ class MitmChannel:
         self.queue = deque()
         self.time0 = 0
         self.log_buffering = False
+        self.counter_read = 0
+        self.counter_write = 0
 
     def flush_log_buffer(self):
         for item in self.queue:
@@ -46,12 +48,17 @@ class MitmChannel:
 
     def read(self):
         data = self.orig.read()
+        self.counter_read += len(data)
         if self.log:
             self._log_event(MitmChannel.LogRecord(time=time.perf_counter(), type=MitmEventType.READ, data=data))
         return data
 
     def write(self, msg, *args):
         self.orig.write(msg, *args)
+
+        for m in (msg,) + args:
+            self.counter_write += len(m)
+
         if self.log:
             self._log_event(MitmChannel.LogRecord(time=time.perf_counter(), type=MitmEventType.WRITE, data=msg))
             for m in args:

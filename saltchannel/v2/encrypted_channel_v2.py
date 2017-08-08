@@ -63,9 +63,9 @@ class EncryptedChannelV2(ByteChannel):
         return clear
 
     def write(self, message, *args):
-        raw = b''
+        raw = bytearray()
         for msg in (message,) + args:
-            raw = raw.join(self.wrap(self.encrypt(msg)))
+            raw.extend(self.wrap(self.encrypt(msg)))
             self.write_nonce.advance()
         self.channel.write(raw)
 

@@ -57,7 +57,9 @@ class MpClientServerPair(ClientServerPair):
             def handle(self):
                 ch = SocketChannel(self.request)
                 #ch = StreamChannel(self.rfile)
-                session.server_session(MitmChannel(ch, log=logging.getLogger(__name__)))
+
+                session.server_session(ch)
+                #session.server_session(MitmChannel(ch, log=logging.getLogger(__name__)))
                 # Echo the back to the client
               #  try:
               #      while True:
@@ -113,7 +115,8 @@ class MpClientServerPair(ClientServerPair):
             self.is_session_active = True
 
             # invoke method(-s) in Session object instance
-            self.session.client_session(channel)
+            #self.session.client_session(channel)
+            self.session.client_session(MitmChannel(channel, log=logging.getLogger(__name__)))
 
         except Exception as e:
             logging.exception(e)

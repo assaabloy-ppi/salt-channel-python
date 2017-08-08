@@ -269,22 +269,31 @@ class EncryptedPacket(Packet):
         # EncryptedPacket body fields
         _fields_ = [('Header', _EncryptedPacketHeader)]
 
-    def _opt_factory(self, body=None, body_msg_size=0):
+    def _opt_factory(self, body=None, body_field_len=0):
         if body is None:
             return Packet._EmptyBodyOpt()
 
+        if body_field_len < 0:
+            raise BadPeer("'Body' field size requested too small: ", body_field_len)
+
         class _EncryptedPacketBodyOpt(SmartStructure):
             # EncryptedPacket opt/variable fields
-            _fields_ = [('Body', c_uint8 * body_msg_size)]
+            _fields_ = [('Body', c_uint8 * body_field_len)]
         return _EncryptedPacketBodyOpt()
 
     def __init__(self, src_buf=None):
         super().__init__()
         self.data = EncryptedPacket._EncryptedPacketBody()
         self.data.Header.PacketType = type(self).TYPE
-        self.opt = self._opt_factory()
         if src_buf:
             self.from_bytes(src_buf)
+
+    def from_bytes(self, src, validate=True):
+        self.data.from_bytes(src)
+        self.opt = self._opt_factory(body=src, body_field_len=len(src)-2)
+        self.opt.from_bytes(src[self.data.size:])
+        if validate:
+            self.validate()
 
     def validate(self):
         super().validate()
@@ -297,7 +306,7 @@ class EncryptedPacket(Packet):
 
     @Body.setter
     def Body(self, value):
-        self.create_opt_fields(body_msg_size=len(bytes(value)))   # maybe need to optimize this
+        self.opt = self._opt_factory(body=value, body_field_len=len(value))
         self.opt.Body = util.cbytes(value)
 
 
@@ -313,22 +322,31 @@ class AppPacket(Packet):
         _fields_ = [('Header', _AppPacketHeader),
                     ('Time', c_uint32)]
 
-    def _opt_factory(self, body=None, data_msg_size=0):
+    def _opt_factory(self, body=None, data_field_len=0):
         if body is None:
             return Packet._EmptyBodyOpt()
 
+        if data_field_len < 0:
+            raise BadPeer("'Data' field size requested too small: ", data_field_len)
+
         class _AppPacketBodyOpt(SmartStructure):
             # AppPacket opt/variable fields
-            _fields_ = [('Data', c_uint8 * data_msg_size)]
+            _fields_ = [('Data', c_uint8 * data_field_len)]
         return _AppPacketBodyOpt()
 
     def __init__(self, src_buf=None):
         super().__init__()
         self.data = AppPacket._AppPacketBody()
         self.data.Header.PacketType = type(self).TYPE
-        self.opt = self._opt_factory()
         if src_buf:
             self.from_bytes(src_buf)
+
+    def from_bytes(self, src, validate=True):
+        self.data.from_bytes(src)
+        self.opt = self._opt_factory(body=src, data_field_len=len(src)-6)
+        self.opt.from_bytes(src[self.data.size:])
+        if validate:
+            self.validate()
 
     @property
     def Data(self):
@@ -336,7 +354,7 @@ class AppPacket(Packet):
 
     @Data.setter
     def Data(self, value):
-        self.create_opt_fields(data_msg_size=len(bytes(value)))   # maybe need to optimize this
+        self.opt = self._opt_factory(body=value, data_field_len=len(value))
         self.opt.Data = util.cbytes(value)
 
 
