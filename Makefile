@@ -39,3 +39,6 @@ run_simple_echo_session_a: ## Run asyncio version of 'run_simple_echo_session' t
 
 run_example_session_data: ## Run 'dev/example_session_data.py' to dump basic hansdhake data
 	_virtualenv/bin/python3 -m saltchannel.dev.example_session_data
+
+run_example_session_data_a: ## Run 'dev/example_session_data_a.py' to dump basic hansdhake data (async!)
+	_virtualenv/bin/python3 -m saltchannel.dev.example_session_data_a

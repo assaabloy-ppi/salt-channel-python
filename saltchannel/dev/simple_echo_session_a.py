@@ -6,7 +6,7 @@ CLIENT_SEND_LOOPS = 10
 
 
 class SimpleEchoSessionA(SessionA):
-    """Client session + server session asyncio coroutines implementing simplest echo protocol
+    """Client session + server sessions asyncio coroutines implementing simplest echo protocol
     """
 
     async def server_session(self, reader, writer):

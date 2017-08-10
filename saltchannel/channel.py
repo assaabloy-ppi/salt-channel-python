@@ -2,10 +2,7 @@
 Byte arrays can be read and written; a simple blocking model.
 """
 import io
-import socket
-import codecs
 import struct
-import traceback
 from abc import ABCMeta, abstractmethod
 
 from .exceptions import ComException, BadPeer

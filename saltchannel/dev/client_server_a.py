@@ -70,7 +70,7 @@ class SessionA(metaclass=ABCMeta):
     async def client_session(self, reader, writer):
         pass
 
-# To work correctly with ProcessPoolExecutor next MUST be top-level (asyncio limitation?)
+# To work with multiprocessing MUST be top-level (asyncio limitation?)
 SERVER = None
 LOOP = None
 
