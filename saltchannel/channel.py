@@ -78,20 +78,22 @@ class SocketChannel(ByteChannel):
             raise ComException(e)
 
     def write(self, message, *args):
+        raw = bytearray()
         try:
             for msg in (message,) + args:
-                self.sock.sendall(b''.join([struct.pack('<i', len(msg)), bytes(msg)]))
+                raw.extend(b''.join([struct.pack('<i', len(msg)), bytes(msg)]))
+            self.sock.sendall(bytes(raw))
         except Exception as e:
             raise ComException(e)
 
     def recvall(self, count):
-        buf = b''
+        buf = bytearray()
         while count:
             newbuf = self.sock.recv(count)
-            if not newbuf: return (buf, False)
-            buf += newbuf
+            if not newbuf: return (bytes(buf), False)
+            buf.extend(newbuf)
             count -= len(newbuf)
-        return (buf, True)
+        return (bytes(buf), True)
 
 
 class PipeChannel(ByteChannel):

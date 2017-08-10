@@ -18,16 +18,17 @@ class AppChannelV2(ByteChannel):
         return ap.Data
 
     def write(self, message, *args):
-        raw = bytearray()
+        msg_list = []
         ap = AppPacket()
 
         if self.buffered_m4:
             self.buffered_m4.data.Time = self.time_keeper.get_time()
-            raw = bytearray(self.buffered_m4)
+            msg_list.append(bytes(self.buffered_m4))
+            self.buffered_m4 = None
 
         for msg in (message,) + args:
-            ap.Data = msg
             ap.data.Time = self.time_keeper.get_time()
-            raw.extend(bytes(ap))
+            ap.Data = msg
+            msg_list.append(bytes(ap))
 
-        self.channel.write(raw)
+        self.channel.write(msg_list[0], *(msg_list[1:]))

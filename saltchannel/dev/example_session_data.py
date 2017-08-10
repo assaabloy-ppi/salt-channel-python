@@ -39,7 +39,7 @@ class ExampleSession(Session):
                 #msg = channel.read()
                 sss = SaltServerSession(self.server_sig_keypair, channel)
                 sss.enc_keypair = self.server_enc_keypair
-                sss.buffer_m2 = False
+                sss.buffer_m2 = True
                 sss.handshake()
                 sss.app_channel.write(sss.app_channel.read())  # echo once at app layer
 
@@ -52,7 +52,7 @@ class ExampleSession(Session):
         """Client-side session implementation for basic handshake"""
         scs = SaltClientSession(self.client_sig_keypair, channel)
         scs.enc_keypair = self.client_enc_keypair
-        scs.buffer_M4 = False
+        scs.buffer_M4 = True
 
         # print session initial details to stdout
         print("======== example_session_data.py ========")
@@ -87,6 +87,7 @@ class ExampleSession(Session):
 
         print("\nHANDSHAKE BYTES: ", cnt_write0 + cnt_read0)
         print("TOTAL BYTES: ", cnt_write + cnt_read)
+        print("\n ---------------------------------------------------------------------\n")
 
 def main():
     print()

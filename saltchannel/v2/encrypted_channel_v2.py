@@ -63,11 +63,11 @@ class EncryptedChannelV2(ByteChannel):
         return clear
 
     def write(self, message, *args):
-        raw = bytearray()
+        msg_list = []
         for msg in (message,) + args:
-            raw.extend(self.wrap(self.encrypt(msg)))
+            msg_list.append(self.wrap(self.encrypt(msg)))
             self.write_nonce.advance()
-        self.channel.write(raw)
+        self.channel.write(msg_list[0], *msg_list[1:])
 
     def encrypt(self, clear):
         return self.saltlib.crypto_box_afternm(clear, bytes(self.write_nonce), self.key)

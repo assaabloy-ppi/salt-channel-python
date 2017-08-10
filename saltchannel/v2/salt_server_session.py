@@ -105,10 +105,13 @@ class SaltServerSession:
 
     def do_m3(self):
         time = 0
+        msg_list = []
+
         if self.buffer_m2:
             time = self.time_keeper.get_first_time()
             self.m2.data.Time = time
             self.m2_hash = self.saltlib.sha512(bytes(self.m2))
+            msg_list.append(bytes(self.m2))
         else:
             time = self.time_keeper.get_time()
 
@@ -117,13 +120,10 @@ class SaltServerSession:
         p.ServerSigKey = self.sig_keypair.pub
         p.Signature1 = self.saltlib.sign(b''.join([self.m1_hash, self.m2_hash]), self.sig_keypair.sec)[:SaltLibBase.crypto_sign_BYTES]
 
-        m3_enc = self.enc_channel.wrap(self.enc_channel.encrypt(bytes(p)))
+        msg_list.append(self.enc_channel.wrap(self.enc_channel.encrypt(bytes(p))))
         self.enc_channel.write_nonce.advance()
 
-        if self.buffer_m2:  # TODO ppmag: make code shorted here:  4 -> 2 lines
-            self.clear_channel.write(bytes(p), m3_enc)
-        else:
-            self.clear_channel.write(m3_enc)
+        self.clear_channel.write(msg_list[0], *(msg_list[1:]))
 
     def do_m4(self):
         self.m4 = packets.M4Packet(src_buf=self.enc_channel.read())
