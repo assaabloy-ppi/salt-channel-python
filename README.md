@@ -3,26 +3,16 @@ salt-channel-python
 
 Python 3 implementation of Salt Channel v2.
 
-WORK IN PROGRESS..
-
-
 Usage
 ======
 
-Quick start. Let's see what we can do right now?
+After repo cloning to initialize virtualenv:
+
+`make bootstrap`
+
+For list of current options available, just:
 
 `make`
-
-
-Running unit tests:
-    
-`make test`
-
-
-Running benchmarking suite for 'saltlib':
-     
-`make benchmark_saltlib`
-
 
 
 Package 'saltlib'
