@@ -17,8 +17,7 @@ class ByteChannelA(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def write(self, msg, *args):
-        """Writes messages. This method may block."""
+    async def write(self, msg, *args):
         pass
 
 
@@ -38,5 +37,19 @@ class AsyncioChannel(ByteChannelA):
             self.writer.write_msg(m)
         await self.writer.drain()
 
-    async def close(self):
+    def close(self):
         self.writer.close()
+
+
+class AsyncizedChannel(ByteChannelA):
+    """Used to wrap ByteChannel-based channel class to be instantly usable with await... """
+
+    def __init__(self, channel):
+        self.orig_channel = channel
+        super(AsyncizedChannel, self).__init__()
+
+    async def read(self):
+        return self.orig_channel.read()
+
+    async def write(self, msg, *args):
+        self.orig_channel.write(msg, *args)

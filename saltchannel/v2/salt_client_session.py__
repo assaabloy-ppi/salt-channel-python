@@ -1,0 +1,12 @@
+import asyncio
+from .salt_client_session_a import SaltClientSessionA
+
+
+class SaltClientSession(SaltClientSessionA):
+
+    def __init__(self, *args, **kwargs):
+        super(SaltClientSession, self).__init__(*args, **kwargs)
+        self.loop = asyncio.new_event_loop()
+
+    def handshake(self):
+        self.loop.run_until_complete(super().handshake())

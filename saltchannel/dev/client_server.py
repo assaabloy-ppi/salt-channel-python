@@ -10,8 +10,9 @@ from abc import ABCMeta, abstractmethod
 import codecs
 
 from saltchannel.channel import SocketChannel, StreamChannel
+from saltchannel.channel_a import AsyncizedChannel
 from .mitm_channel import MitmChannel
-
+from .mitm_channel_a import AsyncizedMitmChannel
 
 class Session(metaclass=ABCMeta):
     """Client session + server session routines"""
@@ -55,8 +56,8 @@ class MpClientServerPair(ClientServerPair):
         class TCPRequestHandler(socketserver.BaseRequestHandler):
 
             def handle(self):
+                #ch = AsyncizedChannel(SocketChannel(self.request))
                 ch = SocketChannel(self.request)
-                #ch = StreamChannel(self.rfile)
 
                 session.server_session(ch)
                 #session.server_session(MitmChannel(ch, log=logging.getLogger(__name__)))
@@ -116,7 +117,12 @@ class MpClientServerPair(ClientServerPair):
 
             # invoke method(-s) in Session object instance
             #self.session.client_session(channel)
+
+            #self.session.client_session(AsyncizedMitmChannel(channel, log=logging.getLogger(__name__)))
             self.session.client_session(MitmChannel(channel, log=logging.getLogger(__name__)))
+
+            # self.session.client_session(MitmChannel(channel, log=logging.getLogger(__name__)))
+
 
         except Exception as e:
             logging.exception(e)

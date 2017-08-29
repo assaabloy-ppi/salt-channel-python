@@ -11,13 +11,12 @@ test: ## Run all unittests
 	_virtualenv/bin/python3 setup.py test
 
 clean: ## Project cleanup
+	py3clean .
 	rm -f MANIFEST
 	rm -rf build dist
 
 benchmark_saltlib: ## Run SaltLib benchmarking suite
 	_virtualenv/bin/python3 setup.py benchmark_saltlib
-
-
 
 bootstrap: _virtualenv ## Initialize virtual environment
 #ifneq ($(wildcard test-requirements.txt),)
@@ -25,6 +24,9 @@ bootstrap: _virtualenv ## Initialize virtual environment
 #endif
 	_virtualenv/bin/pip3 install -e .
 	make clean
+
+activate:  ## Activate virtual environment if inactive
+	python3 _virtualenv/bin/activate_this.py
 
 _virtualenv:
 	virtualenv _virtualenv
