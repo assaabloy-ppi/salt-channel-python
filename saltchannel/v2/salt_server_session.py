@@ -155,7 +155,7 @@ class SaltServerSession:
         try:
             self.saltlib.sign_open(b''.join([self.m4.Signature2, self.m1_hash, self.m2_hash]), self.m4.ClientSigKey)
         except saltchannel.saltlib.exceptions.BadSignatureException:
-            raise saltchannel.saltlib.exceptions.BadPeer("invalid signature")
+            raise saltchannel.exceptions.BadPeer("invalid signature")
 
 
     def validate(self):
