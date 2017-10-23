@@ -51,7 +51,7 @@ class SaltLib(metaclass=Singleton):
         return SaltLib._rand(n)
 
     def create_enc_keys(self):
-        self.create_enc_keys_from_sec(self.random_bytes(self.api.crypto_box_SECRETKEYBYTES))
+        return self.create_enc_keys_from_sec(self.random_bytes(self.api.crypto_box_SECRETKEYBYTES))
 
     def create_enc_keys_from_sec(self, sec):
         pk, sk = self.api.crypto_box_keypair_not_random(sec)
