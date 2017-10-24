@@ -2,7 +2,6 @@ from enum import Enum
 from ctypes import *
 from abc import ABCMeta
 
-from .exceptions import BadTicket
 from ..exceptions import BadPeer as BadPeer
 
 import saltchannel.util as util
@@ -16,11 +15,9 @@ class PacketType(Enum):
     TYPE_M4 = 4
     TYPE_APP_PACKET = 5
     TYPE_ENCRYPTED_PACKET = 6
-    TYPE_TICKET = 7
     TYPE_A1 = 8
     TYPE_A2 = 9
-    TYPE_TT = 10
-    TYPE_TICKET_ENCRYPTED = 11
+    TYPE_MULTIAPP_PACKET = 11
 
 
 class SmartStructure(LittleEndianStructure):
@@ -89,7 +86,7 @@ class Packet(metaclass=ABCMeta):
             return object.__getattr__(self, name)
 
     def __setattr__(self, name, value):
-        if name in ["data", "opt", "_ticket"] or isinstance(getattr(type(self), name, None), property):
+        if name in ["data", "opt"] or isinstance(getattr(type(self), name, None), property):
             super().__setattr__(name, value)
         else:
             setattr(self.data, name, util.cbytes(value))
@@ -110,8 +107,6 @@ class M1Packet(Packet):
             # M1 header fields
             _fields_ = [('PacketType', c_uint8),
                         ('ServerSigKeyIncluded', c_uint8, 1),
-                        ('TicketIncluded', c_uint8, 1),
-                        ('TicketRequested', c_uint8, 1),
                         ('_reserved', c_uint8, 5)]
         # M1 body fields
         _fields_ = [('ProtocolIndicator', c_uint8 * 4),
@@ -130,26 +125,21 @@ class M1Packet(Packet):
 
         class _M1PacketBodyOpt(SmartStructure):
             # M1 body opt fields
-            _fields_ = [('ServerSigKey', c_uint8 * (32 * body.Header.ServerSigKeyIncluded)),
-                        ('TicketSize', c_uint8 * (1 * body.Header.TicketIncluded))]
+            _fields_ = [('ServerSigKey', c_uint8 * (32 * body.Header.ServerSigKeyIncluded))]
         return _M1PacketBodyOpt()
 
-    def __init__(self, src_buf=None, ticket=b''):
+    def __init__(self, src_buf=None):
         self.data = M1Packet._M1PacketBody()
         self.data.Header.PacketType = type(self).TYPE
         self.opt = self._opt_factory()
-        self._ticket = bytes(ticket)
         if src_buf:
             self.from_bytes(src_buf)
 
     def __bytes__(self):
-        return b''.join([bytes(self.data), bytes(self.opt), self._ticket])
+        return b''.join([bytes(self.data), bytes(self.opt)])
 
     def from_bytes(self, src):
         super().from_bytes(src, validate=False)  # validate at the end of this method instead
-        if self.data.Header.TicketIncluded == 1 and self.opt.TicketSize != 0:
-            offset = sizeof(self.data)+sizeof(self.opt)
-            self._ticket = bytes(src[offset:offset + self.opt.TicketSize[0]])
         self.validate()
 
     def validate(self):
@@ -157,24 +147,11 @@ class M1Packet(Packet):
         super().validate()
         if self.data.ProtocolIndicator[:] != self.data._defaults_['ProtocolIndicator'][:]:
             raise BadPeer("unexpected ProtocolIndicator: ", bytes(self.data.ProtocolIndicator))
-        if self.data.Header.TicketIncluded == 1 and self.opt.TicketSize[0] > 127:
-            raise BadPeer("bad TicketSize", self.opt.TicketSize)
 
     @property
     def size(self):
         """Returns size of packet when serialized to a bytearray."""
-        return len(self.data) + len(self.opt) + len(self._ticket)
-
-    @property
-    def Ticket(self):
-        return self._ticket
-
-    @Ticket.setter
-    def Ticket(self, value):
-        if self.data.Header.TicketIncluded != 1:
-            raise AttributeError("Header.TicketIncluded != 1. Please set it explicitly before create_opt_fields() call.")
-        self._ticket = value
-        self.opt.TicketSize = util.cbytes(bytes([len(value)]))
+        return len(self.data) + len(self.opt)
 
     @property
     def ServerSigKey(self):
@@ -196,8 +173,9 @@ class M2Packet(Packet):
             # M2 header fields
             _fields_ = [('PacketType', c_uint8),
                         ('NoSuchServer', c_uint8, 1),
-                        ('ResumeSupported', c_uint8, 1),
-                        ('_reserved', c_uint8, 6)]
+                        ('_reserved', c_uint8, 6),
+                        ('LastFlag', c_uint8, 1),
+                        ]
         # M2 body fields
         _fields_ = [('Header', _M2PacketHeader),
                     ('Time', c_uint32),
@@ -214,6 +192,7 @@ class M2Packet(Packet):
 class M3Packet(Packet):
     """Data of the M3 message, low-level serialization/deserialization."""
     TYPE = PacketType.TYPE_M3.value
+    SIG1_PREFIX = b'SC-SIG01'
 
     class _M3PacketBody(SmartStructure):
         class _M3PacketHeader(SmartStructure):
@@ -237,6 +216,7 @@ class M3Packet(Packet):
 class M4Packet(Packet):
     """Data of the M4 message, low-level serialization/deserialization."""
     TYPE = PacketType.TYPE_M4.value
+    SIG2_PREFIX = b'SC-SIG02'
 
     class _M4PacketBody(SmartStructure):
         class _M4PacketHeader(SmartStructure):
@@ -265,7 +245,9 @@ class EncryptedPacket(Packet):
         class _EncryptedPacketHeader(SmartStructure):
             # EncryptedPacket header fields
             _fields_ = [('PacketType', c_uint8),
-                        ('_reserved', c_uint8)]
+                        ('_reserved', c_uint8, 7),
+                        ('LastFlag', c_uint8, 1),
+                        ]
         # EncryptedPacket body fields
         _fields_ = [('Header', _EncryptedPacketHeader)]
 
@@ -357,7 +339,6 @@ class AppPacket(Packet):
         self.opt = self._opt_factory(body=value, data_field_len=len(value))
         self.opt.Data = util.cbytes(value)
 
-
+# leaved here for now
 class TTPacket(Packet):
     SESSION_NONCE_SIZE = 8
-

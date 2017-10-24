@@ -17,7 +17,7 @@ class Tunnel:
             def read(self):
                 return in_queue.popleft()
 
-            def write(self, msg, *args):
+            def write(self, msg, *args, is_last=False):
                 for m in msg + args:
                     out_queue.append(m)
         return _Channel()
@@ -35,7 +35,7 @@ class TunnelMP:
             def read(self):
                 return endpoint.recv_bytes()
 
-            def write(self, msg, *args):
+            def write(self, msg, *args, is_last=False):
                 for m in msg + args:
                     endpoint.send_bytes(m)
         return _Channel()

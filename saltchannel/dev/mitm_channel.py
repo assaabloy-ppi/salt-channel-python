@@ -53,8 +53,8 @@ class MitmChannel:
             self._log_event(MitmChannel.LogRecord(time=time.perf_counter(), type=MitmEventType.READ, data=data))
         return data
 
-    def write(self, msg, *args):
-        self.orig.write(msg, *args)
+    def write(self, msg, *args, is_last=False):
+        self.orig.write(msg, *args, is_last=is_last)
 
         for m in (msg,) + args:
             self.counter_write += len(m)

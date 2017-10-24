@@ -6,8 +6,7 @@ from ..saltlib.saltlib_base import SaltLibBase
 from ..util.time import NullTimeChecker, NullTimeKeeper
 from ..util.key_pair import KeyPair
 from . import packets
-from . import ticket
-#import exceptions
+
 import saltchannel.saltlib.exceptions
 from .encrypted_channel_v2 import EncryptedChannelV2, Role
 from .app_channel_v2 import AppChannelV2
@@ -34,7 +33,6 @@ class SaltServerSession:
         self.time_checker = NullTimeChecker()  # singleton
 
         self.enc_keypair = None
-        self.resume_handler = None
 
         self.m1 = None
         self.m1_hash = b''
@@ -62,7 +60,6 @@ class SaltServerSession:
         self.do_m3()
         self.do_m4()
         self.validate_signature2()
-        self.tt()
 
     def do_a2(data_chunk):
         raise  NotImplemented()
@@ -83,20 +80,14 @@ class SaltServerSession:
             m2 = packets.M2Packet()
             m2.data.Time = self.time_keeper.get_first_time()
             m2.data.Header.NoSuchServer = 1
-            self.clear_channel.write(bytes(m2))
-            raise exceptions.NoSuchServerException()
-
-        # Ticket processing
-        if self.m1.data.Header.TicketIncluded and self.resume_handler:
-            raise NotImplementedError()
-            # return (True,True, None)
+            self.clear_channel.write(bytes(m2), is_last=True)
+            raise saltchannel.exceptions.NoSuchServerException()
 
         return (True,False, None)
 
     def do_m2(self):
         self.m2 = packets.M2Packet()
         self.m2.data.Time = self.time_keeper.get_first_time()
-        self.m2.data.Header.ResumeSupported = 1 if self.resume_handler else 0
         self.m2.ServerEncKey = self.enc_keypair.pub
 
         if not self.buffer_m2:
@@ -118,9 +109,10 @@ class SaltServerSession:
         p = packets.M3Packet()
         p.data.Time = time
         p.ServerSigKey = self.sig_keypair.pub
-        p.Signature1 = self.saltlib.sign(b''.join([self.m1_hash, self.m2_hash]), self.sig_keypair.sec)[:SaltLibBase.crypto_sign_BYTES]
+        p.Signature1 = self.saltlib.sign(b''.join([packets.M3Packet.SIG1_PREFIX, self.m1_hash, self.m2_hash]),
+                                         self.sig_keypair.sec)[:SaltLibBase.crypto_sign_BYTES]
 
-        msg_list.append(self.enc_channel.wrap(self.enc_channel.encrypt(bytes(p))))
+        msg_list.append(self.enc_channel.wrap(self.enc_channel.encrypt(bytes(p)), is_last=False))
         self.enc_channel.write_nonce.advance()
 
         self.clear_channel.write(msg_list[0], *(msg_list[1:]))
@@ -130,33 +122,18 @@ class SaltServerSession:
         self.time_checker.check_time(self.m4.data.Time)
         self.client_sig_key = self.m4.ClientSigKey
 
-    def tt(self):
-        """Sends TT message if this server supports resume and the client requested a ticket."""
-        if not self.resume_handler:
-            return
-
-        if self.m1.data.Header.TicketRequested:
-            raise NotImplementedError
-
     def create_encrypted_channel(self):
         self.session_key = self.saltlib.compute_shared_key(self.enc_keypair.sec, self.m1.ClientEncKey)
         self.enc_channel = EncryptedChannelV2(self.clear_channel, self.session_key, Role.SERVER)
         self.app_channel = AppChannelV2(self.enc_channel, self.time_keeper, self.time_checker)
 
-    def create_encrypted_channel_for_resumed(self, ts_data):
-        self.session_key = ts_data.session_key
-        self.client_sig_key = ts_data.client_sig_key
-        self.enc_channel = EncryptedChannelV2(self.clear_channel, self.session_key, Role.SERVER,
-                                              ts_data.session_nonce)
-        self.app_channel = AppChannelV2(self.enc_channel, self.time_keeper, self.time_checker)
-
     def validate_signature2(self):
         """Validates M4/Signature2."""
         try:
-            self.saltlib.sign_open(b''.join([self.m4.Signature2, self.m1_hash, self.m2_hash]), self.m4.ClientSigKey)
-        except saltlib.exceptions.BadSignatureException:
-            raise exceptions.BadPeer("invalid signature")
-
+            self.saltlib.sign_open(b''.join([self.m4.Signature2, packets.M4Packet.SIG2_PREFIX,
+                                             self.m1_hash, self.m2_hash]), self.m4.ClientSigKey)
+        except saltchannel.saltlib.exceptions.BadSignatureException:
+            raise saltchannel.exceptions.BadPeer("invalid signature")
 
     def validate(self):
         """Check if current instance's state is valid for handshake to start"""

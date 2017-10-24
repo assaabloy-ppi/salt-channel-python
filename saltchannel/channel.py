@@ -17,7 +17,7 @@ class ByteChannel(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def write(self, msg, *args):
+    def write(self, msg, *args, is_last=False):
         """Writes messages. This method may block."""
         pass
 
@@ -41,7 +41,7 @@ class StreamChannel(ByteChannel):
         except IOError as e:
             raise ComException(e)
 
-    def write(self, message, *args):
+    def write(self, message, *args, is_last=False):
         try:
             for msg in (message,) + args:
                 mbytes = bytes(msg)
@@ -74,12 +74,13 @@ class SocketChannel(ByteChannel):
         except Exception as e:
             raise ComException(e)
 
-    def write(self, message, *args):
+    def write(self, message, *args, is_last=False):
         raw = bytearray()
         try:
             for msg in (message,) + args:
                 raw.extend(b''.join([struct.pack('<i', len(msg)), bytes(msg)]))
             self.sock.sendall(bytes(raw))
+            # [TODO] do we need to close socket here if is_last == True ?
         except Exception as e:
             raise ComException(e)
 

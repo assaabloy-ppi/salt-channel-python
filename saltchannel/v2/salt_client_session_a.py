@@ -3,8 +3,7 @@ from ..saltlib.saltlib_base import SaltLibBase
 from ..util.time import NullTimeChecker, NullTimeKeeper
 from ..util.key_pair import KeyPair
 from . import packets
-from . import ticket
-#import .exceptions
+
 import saltchannel.saltlib.exceptions
 from .encrypted_channel_v2_a import EncryptedChannelV2A, Role
 from .app_channel_v2_a import AppChannelV2A
@@ -25,9 +24,6 @@ class SaltClientSessionA:
 
         self.time_keeper = NullTimeKeeper()  # singleton
         self.time_checker = NullTimeChecker()  # singleton
-        self.ticket_requested = False
-        self.ticket_data = None
-        self.ticket_data_new = None  # new ticket from server
 
         self.session_key = b''
 
@@ -41,7 +37,6 @@ class SaltClientSessionA:
         self.m2_hash = b''
         self.m3 = None
         self.m4 = None
-        self.tt = None
 
     async def handshake(self):
         self.validate()
@@ -49,34 +44,27 @@ class SaltClientSessionA:
 
         (success, recv_chunk) = await self.do_m2()
         if not success:
-            await self.tt1(recv_chunk)
+            #await self.tt1(recv_chunk)
             return
 
         self.create_encrypted_channel()
         await self.do_m3()
         self.validate_signature1()
         await self.do_m4()
-        await self.tt2()
+        #await self.tt2()
 
 
     async def do_m1(self):
         """Creates and writes M1 message."""
         self.m1 = packets.M1Packet()
-        self.m1.data.Header.TicketRequested = self.ticket_requested
         self.m1.create_opt_fields()
         self.m1.data.Time = self.time_keeper.get_first_time()
         self.m1.ClientEncKey = self.enc_keypair.pub
-
-        if self.ticket_data:
-            self.m1.Ticket = self.ticket_data.ticket
 
         m1_raw = bytes(self.m1)
         self.m1_hash = self.saltlib.sha512(m1_raw)
 
         await self.clear_channel.write(m1_raw)
-
-        if self.ticket_data:
-            self.create_encrypted_channel_for_resumed()
 
 
     async def do_m2(self):
@@ -91,27 +79,9 @@ class SaltClientSessionA:
         self.time_checker.report_first_time(self.m2.data.Time)
         self.m2_hash = self.saltlib.sha512(clear_chunk)
         if self.m2.data.Header.NoSuchServer:
-            raise exceptions.NoSuchServerException()
+            raise saltchannel.exceptions.NoSuchServerException()
 
         return (True, None)
-
-    async def tt1(self, raw_chunk):
-        """Processing TT Packet as first reply from the server"""
-        ep = packets.EncryptedPacket(src_buf=raw_chunk)
-        if ep.data.Header.PacketType != packets.PacketType.TYPE_ENCRYPTED_PACKET.value:
-            raise exceptions.BadPeer("expected 'TYPE_ENCRYPTED_PACKET', but received: " + ep.data.Header.PacketType);
-
-        if not self.enc_channel:
-            raise exceptions.BadPeer("got TYPE_ENCRYPTED_PACKET', but not resumed channel exists")
-
-        if not self.m1.Header.TicketRequested:
-            raise exceptions.BadPeer("got a ticket, but none was requested")
-
-        self.enc_channel.pushback_msg = raw_chunk
-
-        tt = packets.TTPacket(src_buf=await self.enc_channel.read())
-        self.new_ticket_data = ticket.ClientTicketData(ticket=tt.ticket, session_key=self.session_key,
-                                                       session_nonce=tt.session_nonce)
 
     async def do_m3(self):
         chunk = await self.enc_channel.read()
@@ -123,36 +93,25 @@ class SaltClientSessionA:
         self.m4 = packets.M4Packet()
         self.m4.data.Time = self.time_keeper.get_time()
         self.m4.ClientSigKey = self.sig_keypair.pub
-        self.m4.Signature2 = self.saltlib.sign(b''.join([self.m1_hash, self.m2_hash]), self.sig_keypair.sec)[:SaltLibBase.crypto_sign_BYTES]
+        self.m4.Signature2 = self.saltlib.sign(b''.join([packets.M4Packet.SIG2_PREFIX,self.m1_hash, self.m2_hash]),
+                                               self.sig_keypair.sec)[:SaltLibBase.crypto_sign_BYTES]
 
         if self.buffer_M4:
             self.app_channel.buffered_m4 = self.m4
         else:
             await self.enc_channel.write(bytes(self.m4))
 
-    async def tt2(self):
-        """Reads TT packet from server after 3-way handshake."""
-        if self.m1.data.Header.TicketRequested and self.m2.data.Header.ResumeSupported:
-            tt = packets.TTPacket(src_buf=await self.enc_channel.read())
-            self.new_ticket_data = ticket.ClientTicketData(ticket=tt.ticket, session_key=self.session_key,
-                                                           session_nonce=tt.session_nonce)
-
     def validate_signature1(self):
         """Validates M3/Signature1."""
         try:
-            self.saltlib.sign_open(b''.join([self.m3.Signature1, self.m1_hash, self.m2_hash]), self.m3.ServerSigKey)
-        except saltlib.exceptions.BadSignatureException:
-            raise exceptions.BadPeer("invalid signature")
+            self.saltlib.sign_open(b''.join([self.m3.Signature1, packets.M3Packet.SIG1_PREFIX,
+                                            self.m1_hash, self.m2_hash]), self.m3.ServerSigKey)
+        except saltchannel.saltlib.exceptions.BadSignatureException:
+            raise saltchannel.exceptions.BadPeer("invalid signature")
 
     def create_encrypted_channel(self):
         self.session_key = self.saltlib.compute_shared_key(self.enc_keypair.sec, self.m2.ServerEncKey)
         self.enc_channel = EncryptedChannelV2A(self.clear_channel, self.session_key, Role.CLIENT)
-        self.app_channel = AppChannelV2A(self.enc_channel, self.time_keeper, self.time_checker)
-
-    def create_encrypted_channel_for_resumed(self):
-        self.session_key = self.ticket_data.session_key
-        self.enc_channel = EncryptedChannelV2A(self.clear_channel, self.session_key, Role.CLIENT,
-                                              self.ticket_data.session_nonce)
         self.app_channel = AppChannelV2A(self.enc_channel, self.time_keeper, self.time_checker)
 
     def validate(self):

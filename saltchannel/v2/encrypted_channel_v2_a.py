@@ -63,12 +63,13 @@ class EncryptedChannelV2A(ByteChannel):
         self.read_nonce.advance()
         return clear
 
-    async def write(self, message, *args):
+    async def write(self, message, *args, is_last=False):
+        msgs = (message,) + args
         msg_list = []
-        for msg in (message,) + args:
-            msg_list.append(self.wrap(self.encrypt(msg)))
+        for i, msg in enumerate(msgs):
+            msg_list.append(self.wrap(self.encrypt(msg), is_last=(is_last and int(i) == len(msgs)-1)))
             self.write_nonce.advance()
-        await self.channel.write(msg_list[0], *msg_list[1:])
+        await self.channel.write(msg_list[0], *msg_list[1:], is_last=is_last)
 
     def encrypt(self, clear):
         return self.saltlib.crypto_box_afternm(clear, bytes(self.write_nonce), self.key)
@@ -79,9 +80,10 @@ class EncryptedChannelV2A(ByteChannel):
         except BadEncryptedDataException:
             raise BadPeer("invalid ciphertext, could not be decrypted")
 
-    def wrap(self, src_bytes):
+    def wrap(self, src_bytes, is_last=False):
         """Wrap encrypted bytes in EncryptedPacket"""
         ep = EncryptedPacket()
+        ep.data.Header.LastFlag = int(is_last)
         ep.Body = src_bytes
         return bytes(ep)
 

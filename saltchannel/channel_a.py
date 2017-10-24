@@ -17,7 +17,7 @@ class ByteChannelA(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    async def write(self, msg, *args):
+    async def write(self, msg, *args, is_last=False):
         pass
 
 
@@ -32,9 +32,10 @@ class AsyncioChannel(ByteChannelA):
     async def read(self):
         return await self.reader.read_msg()
 
-    async def write(self, msg, *args):
+    async def write(self, msg, *args, is_last=False):
         for m in (msg,) + args:
             self.writer.write_msg(m)
+        #[TODO] check : if (is_last)
         await self.writer.drain()
 
     def close(self):
@@ -51,5 +52,5 @@ class AsyncizedChannel(ByteChannelA):
     async def read(self):
         return self.orig_channel.read()
 
-    async def write(self, msg, *args):
-        self.orig_channel.write(msg, *args)
+    async def write(self, msg, *args, is_last=False):
+        self.orig_channel.write(msg, *args, is_last=is_last)

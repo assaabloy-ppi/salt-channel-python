@@ -18,7 +18,7 @@ class AppChannelV2A(ByteChannel):
         self.time_checker.check_time(ap.data.Time)
         return ap.Data
 
-    async def write(self, message, *args):
+    async def write(self, message, *args, is_last=False):
         msg_list = []
         ap = AppPacket()
 
@@ -32,4 +32,4 @@ class AppChannelV2A(ByteChannel):
             ap.Data = msg
             msg_list.append(bytes(ap))
 
-        await self.channel.write(msg_list[0], *(msg_list[1:]))
+        await self.channel.write(msg_list[0], *(msg_list[1:]), is_last=is_last)
