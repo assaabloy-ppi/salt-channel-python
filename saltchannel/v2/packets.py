@@ -68,7 +68,6 @@ class Packet(metaclass=ABCMeta):
         """Check packet for consistency. Raise BadPeer() inside if something is wrong"""
         if self.data.Header.PacketType != type(self).TYPE:
             raise BadPeer("bad packet type: ", self.data.Header.PacketType)
-        #TODO: test data 0xdeadbeef should be changed to other value to pass this validation
         #if self.data.Time > 0x7fffffff:
         #    raise BadPeer("Time field range is invalid")
 
@@ -187,6 +186,16 @@ class M2Packet(Packet):
         self.data.Header.PacketType = type(self).TYPE
         if src_buf:
             self.from_bytes(src_buf)
+
+    def __bytes__(self):
+        if self.data.Header.NoSuchServer:
+            self.data.Header.LastFlag = 1  # LastFlag is implied
+        return bytes(self.data)
+
+    def validate(self):
+        """Check packet for consistency. Raise BadPeer() inside if something is wrong"""
+        super().validate()
+
 
 
 class M3Packet(Packet):
