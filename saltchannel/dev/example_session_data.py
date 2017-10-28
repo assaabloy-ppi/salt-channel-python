@@ -43,6 +43,10 @@ class ExampleSession(Session):
                 sss.handshake()
                 sss.app_channel.write(sss.app_channel.read())  # echo once at app layer
 
+                if sss.app_channel.last: # client do not plan to send something more
+                    logging.info("LastFlag detected in client's message. Server decides to close current connection.")
+                    return
+
                 #if not msg:
                 #    return # client closed socket
         except ComException:
@@ -68,7 +72,7 @@ class ExampleSession(Session):
         cnt_write0 = channel.counter_write  # it's possible with MitmChannel instances only!
 
         app_request = bytes([0x01, 0x05, 0x05, 0x05, 0x05, 0x05])
-        scs.app_channel.write(app_request)
+        scs.app_channel.write(app_request, is_last=True)
         app_response = scs.app_channel.read()
 
         cnt_read = channel.counter_read  # it's possible with MitmChannel instances only!

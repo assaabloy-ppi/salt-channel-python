@@ -50,6 +50,9 @@ class ExampleSessionA(SessionA):
         await sssa.handshake()
         await sssa.app_channel.write(await sssa.app_channel.read())  # echo once at app layer
 
+        if sssa.app_channel.last:  # client do not plan to send something more
+            logging.info("LastFlag detected in client's message. Server decides to close current connection.")
+
         logging.info("SRV closing connection")
         channel.close()
 
@@ -76,7 +79,7 @@ class ExampleSessionA(SessionA):
         cnt_write0 = channel.counter_write  # it's possible with MitmChannel instances only!
 
         app_request = bytes([0x01, 0x05, 0x05, 0x05, 0x05, 0x05])
-        await scsa.app_channel.write(app_request)
+        await scsa.app_channel.write(app_request, is_last=True)
         app_response = await scsa.app_channel.read()
 
         cnt_read = channel.counter_read  # it's possible with MitmChannel instances only!
@@ -98,7 +101,7 @@ class ExampleSessionA(SessionA):
         print("\n ---------------------------------------------------------------------\n")
 
         # empty msg mean session end
-        await channel.write(b'')
+        #await channel.write(b'')
         logging.info('Client closing the socket')
         channel.close()
 

@@ -13,6 +13,10 @@ class AppChannelV2A(ByteChannel):
         self.time_checker = time_checker
         self.buffered_m4 = None
 
+    @property
+    def last(self):
+        return self.channel.last_flag
+
     async def read(self):
         ap = AppPacket(src_buf=await self.channel.read())
         self.time_checker.check_time(ap.data.Time)

@@ -12,6 +12,10 @@ class AppChannelV2(ByteChannel):
         self.time_checker = time_checker
         self.buffered_m4 = None
 
+    @property
+    def last(self):
+        return self.channel.last_flag
+
     def read(self):
         ap = AppPacket(src_buf=self.channel.read())
         self.time_checker.check_time(ap.data.Time)

@@ -48,6 +48,7 @@ class EncryptedChannelV2A(ByteChannel):
         self.key = key
         self.channel = channel
         self.pushback_msg = b''  # used for Resume feature when happens just read chunk is encrypted
+        self.last_flag = False   # LastFlag from EncryptedPacket obtained in last unwrap call
 
         self.read_nonce = Nonce(NonceType.READ, session_nonce, value= 2 if role == Role.CLIENT else 1)
         self.write_nonce = Nonce(NonceType.WRITE, session_nonce, value= 1 if role == Role.CLIENT else 2)
@@ -89,4 +90,7 @@ class EncryptedChannelV2A(ByteChannel):
 
     def unwrap(self, ep_bytes):
         """Extract body from EncryptedPacket bytes"""
-        return EncryptedPacket(src_buf=ep_bytes).Body
+        ep = EncryptedPacket(src_buf=ep_bytes)
+        self.last_flag = bool(ep.data.Header.LastFlag)
+        return ep.Body
+
