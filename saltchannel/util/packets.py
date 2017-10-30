@@ -3,6 +3,7 @@ from ctypes import *
 from abc import ABCMeta
 
 import saltchannel.util as util
+from ..exceptions import BadPeer as BadPeer
 
 
 class PacketType(Enum):
