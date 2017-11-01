@@ -5,7 +5,7 @@ from ..exceptions import BadPeer as BadPeer
 
 
 class A1Packet(Packet):
-    TYPE = PacketType.TYPE_A1_PACKET.value
+    TYPE = PacketType.TYPE_A1.value
     ADDRESS_TYPE_ANY = 0
     ADDRESS_TYPE_PUBKEY = 1
     MAX_ADDRESS_LENGTH = 65535
@@ -74,9 +74,10 @@ class A1Packet(Packet):
 
 
 class A2Packet(Packet):
-    TYPE = PacketType.TYPE_A2_PACKET.value
+    TYPE = PacketType.TYPE_A2.value
     P_SIZE = 10
-    proto_pattern = re.compile(r'^[\w-./]+$')
+    SC2_PROT_STRING = b'SCv2------'
+    UNSPECIFIED_PROT_STRING = b'----------'
 
     class _A2PacketBody(SmartStructure):
         class _A2PacketHeader(SmartStructure):
@@ -96,7 +97,19 @@ class A2Packet(Packet):
 
         class _A2Prot(SmartStructure):
             _fields_ = [("P1", c_uint8 * A2Packet.P_SIZE),
-                       ("P2", c_uint8 * A2Packet.P_SIZE)]
+                        ("P2", c_uint8 * A2Packet.P_SIZE)]
+            proto_re = re.compile(r'^[-./\w]+$')  # used for p-string validation
+
+            #def __init__(self, P1=A2Packet.SC2_PROT_STRING, P2=A2Packet.UNSPECIFIED_PROT_STRING):
+            #    super().__init__(P1, P2)
+            #    self.data.P1 = util.cbytes(P1)
+            #    self.data.P2 = util.cbytes(P2)
+
+            def validate(self):
+                if len(self.P1) != A2Packet.P_SIZE or len(self.P2) != A2Packet.P_SIZE:
+                    return False
+                return True if (type(self).proto_re.match(bytes(self.P1).decode()) and
+                                type(self).proto_re.match(bytes(self.P2).decode())) else False
 
         class _A2PacketBodyOpt(SmartStructure):
             # A2Packet opt/variable fields
@@ -104,11 +117,16 @@ class A2Packet(Packet):
 
         return _A2PacketBodyOpt()
 
-    def __init__(self, src_buf=None):
+    def __init__(self, src_buf=None, no_such_server=False):
         super().__init__()
         self.data = A2Packet._A2PacketBody()
         self.data.Header.PacketType = type(self).TYPE
-        self.data.LastFlag = 1
+        self.data.Count = 0
+        self.data.Header.LastFlag = 1
+        if no_such_server:
+            self.data.Header.NoSuchServer = 1
+            #self.opt = self._opt_factory(body=None, prot_count=0)
+            return
         if src_buf:
             self.from_bytes(src_buf)
 
@@ -118,11 +136,6 @@ class A2Packet(Packet):
         self.opt.from_bytes(src[self.data.size:])
         if validate:
             self.validate()
-
-    def _check_pstring(self, pstr):
-        if len(pstr) != A2Packet.P_SIZE:
-            return False
-        return True if type(self).proto_pattern.match(pstr) else False
 
     def validate(self):
         """Check packet for consistency. Raise BadPeer() inside if something is wrong"""
@@ -135,17 +148,15 @@ class A2Packet(Packet):
         if not self.data.Header.LastFlag:
             raise BadPeer("LastFlag MUST be set for A2")
 
-        if not 0 <= self.data.Count <=127:
+        if not 0 <= self.data.Count <= 127:
             raise BadPeer("Count out of range")
 
         if len(self.opt.Prot) != self.data.Count:
             raise BadPeer("Prot array size doesn't match Count field value")
 
-        for i, prot in self.opt.Prot:
-            if not self._check_pstring(prot.P1):
+        for i, prot in enumerate(self.opt.Prot):
+            if not prot.validate():
                 raise BadPeer("Invalid P1, Proto: ", i)
-            if not self._check_pstring(prot.P2):
-                raise BadPeer("Invalid P2, Proto: ", i)
 
     @property
     def Prot(self):
