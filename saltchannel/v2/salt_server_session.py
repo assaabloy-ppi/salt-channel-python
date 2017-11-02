@@ -6,6 +6,7 @@ from ..saltlib.saltlib_base import SaltLibBase
 from ..util.time import NullTimeChecker, NullTimeKeeper
 from ..util.key_pair import KeyPair
 from . import packets
+from saltchannel.a1a2 import packets
 
 import saltchannel.saltlib.exceptions
 from .encrypted_channel_v2 import EncryptedChannelV2, Role
@@ -40,6 +41,8 @@ class SaltServerSession:
         self.m2_hash = b''
         self.m4 = None
 
+        self.is_done = False
+
         self.buffer_m2 = False
         self.client_sig_key = None
 
@@ -49,7 +52,10 @@ class SaltServerSession:
 
         if not valid_m1:
             self.do_a2(recv_chunk)
+            self.is_done = True
             return
+
+        self.validate()
 
         if resumed:
             return
@@ -61,8 +67,13 @@ class SaltServerSession:
         self.do_m4()
         self.validate_signature2()
 
-    def do_a2(data_chunk):
-        raise  NotImplemented()
+    def do_a2(self, data_chunk):
+        a1 = packets.A1Packet(src_buf=data_chunk)
+        a2 = packets.A2Packet(case=packets.A2Packet.Case.A2_NO_SUCH_SERVER
+                                if a1.AddressType == packets.A1Packet.ADDRESS_TYPE_PUBKEY and
+                                   a1.Address != self.sig_keypair.pub
+                                else packets.A2Packet.Case.A2_DEFAUT)
+        self.clear_channel.write(bytes(a2), is_last=True)
 
     def do_m1(self):
         """Returns tuple (valid_m1, resumed, read_chunk)"""
