@@ -74,6 +74,11 @@ class A1Packet(Packet):
 
 
 class A2Packet(Packet):
+    class Case(Enum):
+        A2_NONE = 0
+        A2_NO_SUCH_SERVER = 1
+        A2_DEFAUT = 2
+
     TYPE = PacketType.TYPE_A2.value
     P_SIZE = 10
     SC2_PROT_STRING = b'SCv2------'
@@ -117,15 +122,20 @@ class A2Packet(Packet):
 
         return _A2PacketBodyOpt()
 
-    def __init__(self, src_buf=None, no_such_server=False):
+    def __init__(self, src_buf=None, case=Case.A2_NONE):
         super().__init__()
         self.data = A2Packet._A2PacketBody()
         self.data.Header.PacketType = type(self).TYPE
         self.data.Count = 0
         self.data.Header.LastFlag = 1
-        if no_such_server:
+        if case == self.Case.A2_NO_SUCH_SERVER:
             self.data.Header.NoSuchServer = 1
-            #self.opt = self._opt_factory(body=None, prot_count=0)
+            return
+        elif case == self.Case.A2_DEFAUT:
+            self.data.Count = 1
+            self.opt = self._opt_factory(body=self.data, prot_count=1)
+            self.opt.Prot[0].P1 = util.cbytes(self.SC2_PROT_STRING)
+            self.opt.Prot[0].P2 = util.cbytes(self.UNSPECIFIED_PROT_STRING)
             return
         if src_buf:
             self.from_bytes(src_buf)
