@@ -40,8 +40,8 @@ class ExampleSession(Session):
                 sss = SaltServerSession(self.server_sig_keypair, channel)
                 sss.enc_keypair = self.server_enc_keypair
                 sss.buffer_m2 = True
-                sss.handshake()
-                sss.app_channel.write(sss.app_channel.read())  # echo once at app layer
+                sss.handshake_sync()
+                sss.app_channel.write_sync(sss.app_channel.read_sync())  # echo once at app layer
 
                 if sss.app_channel.last: # client do not plan to send something more
                     logging.info("LastFlag detected in client's message. Server decides to close current connection.")
@@ -66,14 +66,14 @@ class ExampleSession(Session):
         print("\nserver encryption key pair:\n" + str(self.server_enc_keypair))
         print("\n ----------------------- client <--> server --------------------------\n")
 
-        scs.handshake()
+        scs.handshake_sync()
 
         cnt_read0 = channel.counter_read  # it's possible with MitmChannel instances only!
         cnt_write0 = channel.counter_write  # it's possible with MitmChannel instances only!
 
         app_request = bytes([0x01, 0x05, 0x05, 0x05, 0x05, 0x05])
-        scs.app_channel.write(app_request, is_last=True)
-        app_response = scs.app_channel.read()
+        scs.app_channel.write_sync(app_request, is_last=True)
+        app_response = scs.app_channel.read_sync()
 
         cnt_read = channel.counter_read  # it's possible with MitmChannel instances only!
         cnt_write = channel.counter_write  # it's possible with MitmChannel instances only!

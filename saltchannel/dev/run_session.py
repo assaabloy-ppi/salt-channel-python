@@ -1,6 +1,3 @@
-"""
-
-"""
 import sys
 import logging
 import timeit
@@ -17,13 +14,12 @@ from saltchannel.dev.simple_echo_session import SimpleEchoSession
 
 
 def main():
+
     print()
     logging.info("MpClientServerPair with SimpleEchoSession starting...")
     cs = MpClientServerPair(SimpleEchoSession())
     cs.start_server()
-    #cs.wait_before_alive()
     logging.info("MpClientServerPair with SimpleEchoSession is active now.")
-
     logging.info("Starting session [SimpleEchoSession]...")
 
     sessions = 10

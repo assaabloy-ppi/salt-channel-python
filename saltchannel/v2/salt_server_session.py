@@ -1,5 +1,6 @@
 import logging
 import pprint
+import asyncio
 
 from ..saltlib import SaltLib
 from ..saltlib.saltlib_base import SaltLibBase
@@ -7,22 +8,21 @@ from ..util.time import NullTimeChecker, NullTimeKeeper
 from ..util.key_pair import KeyPair
 from .packets import *
 from saltchannel.a1a2.packets import *
+import saltchannel.util as util
 
 import saltchannel.saltlib.exceptions
 from .encrypted_channel_v2 import EncryptedChannelV2, Role
 from .app_channel_v2 import AppChannelV2
 
 
-class SaltServerSession:
+class SaltServerSession(metaclass=util.Syncizer):
     """Server-side implementation of a Salt Channel v2 session.
-    Usage: create object, set or create ephemeral key, use other setX methods,
-    call handshake(), get resulting encrypted ByteChannel to use by
-    application layer.
-    Do not reuse the object for more than one Salt Channel session.
-    Limitation: does not support virtual servers, just one pubkey supported.
+    Asyncio-based implementation
     """
 
-    def __init__(self, sig_keypair, clear_channel):
+    def __init__(self, sig_keypair, clear_channel, loop=None):
+        self.loop = loop or asyncio.new_event_loop()
+        
         self.saltlib = SaltLib()
         self.sig_keypair = sig_keypair
 
@@ -41,43 +41,39 @@ class SaltServerSession:
         self.m2_hash = b''
         self.m4 = None
 
-        self.is_done = False
-
         self.buffer_m2 = False
         self.client_sig_key = None
 
-    def handshake(self):
+    async def handshake(self):
         self.validate()
-        (valid_m1, resumed, recv_chunk) = self.do_m1()
+        (valid_m1, resumed, recv_chunk) = await self.do_m1()
 
         if not valid_m1:
-            self.do_a2(recv_chunk)
-            self.is_done = True
+            await self.do_a2(recv_chunk)
             return
-
-        self.validate()
 
         if resumed:
             return
 
-        self.do_m2()
+        await self.do_m2()
         self.create_encrypted_channel()
 
-        self.do_m3()
-        self.do_m4()
+        await self.do_m3()
+        await self.do_m4()
         self.validate_signature2()
 
-    def do_a2(self, data_chunk):
+    async def do_a2(self, data_chunk):
         a1 = A1Packet(src_buf=data_chunk)
         a2 = A2Packet(case=A2Packet.Case.A2_NO_SUCH_SERVER
                                 if a1.AddressType == A1Packet.ADDRESS_TYPE_PUBKEY and
                                    a1.Address != self.sig_keypair.pub
                                 else A2Packet.Case.A2_DEFAUT)
-        self.clear_channel.write(bytes(a2), is_last=True)
+        await self.clear_channel.write(bytes(a2), is_last=True)
 
-    def do_m1(self):
+    async def do_m1(self):
         """Returns tuple (valid_m1, resumed, read_chunk)"""
-        clear_chunk = self.clear_channel.read()
+        clear_chunk = await self.clear_channel.read()
+
         self.m1 = M1Packet(src_buf=clear_chunk)
 
         if self.m1.data.Header.PacketType != PacketType.TYPE_M1.value:
@@ -91,21 +87,21 @@ class SaltServerSession:
             m2 = M2Packet()
             m2.data.Time = self.time_keeper.get_first_time()
             m2.data.Header.NoSuchServer = 1
-            self.clear_channel.write(bytes(m2), is_last=True)
+            await self.clear_channel.write(bytes(m2), is_last=True)
             raise saltchannel.exceptions.NoSuchServerException()
 
         return (True,False, None)
 
-    def do_m2(self):
+    async def do_m2(self):
         self.m2 = M2Packet()
         self.m2.data.Time = self.time_keeper.get_first_time()
         self.m2.ServerEncKey = self.enc_keypair.pub
 
         if not self.buffer_m2:
-            self.clear_channel.write(bytes(self.m2))  # check for copy overhead here
+            await self.clear_channel.write(bytes(self.m2))  # check for copy overhead here
             self.m2_hash = self.saltlib.sha512(bytes(self.m2)) # check for copy overhead here
 
-    def do_m3(self):
+    async def do_m3(self):
         time = 0
         msg_list = []
 
@@ -126,10 +122,10 @@ class SaltServerSession:
         msg_list.append(self.enc_channel.wrap(self.enc_channel.encrypt(bytes(p)), is_last=False))
         self.enc_channel.write_nonce.advance()
 
-        self.clear_channel.write(msg_list[0], *(msg_list[1:]))
+        await self.clear_channel.write(msg_list[0], *(msg_list[1:]))
 
-    def do_m4(self):
-        self.m4 = M4Packet(src_buf=self.enc_channel.read())
+    async def do_m4(self):
+        self.m4 = M4Packet(src_buf=await self.enc_channel.read())
         self.time_checker.check_time(self.m4.data.Time)
         self.client_sig_key = self.m4.ClientSigKey
 

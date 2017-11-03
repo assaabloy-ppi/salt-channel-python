@@ -1,13 +1,8 @@
 import os
-import sys
-import time
-import traceback
 import codecs
-from random import choice
-from string import ascii_uppercase
 import logging
 from .client_server import Session
-from saltchannel.exceptions  import ComException
+from saltchannel.exceptions import ComException
 
 CLIENT_SEND_LOOPS = 10
 
@@ -18,10 +13,10 @@ class SimpleEchoSession(Session):
     def server_session(self, channel):
         try:
             while True:
-                msg = channel.read()
+                msg = channel.read_sync()
                 if not msg:
                     return # client closed socket
-                channel.write(msg)
+                channel.write_sync(msg)
         except ComException:
             logging.info("Server detected closed connection")
 
@@ -30,6 +25,6 @@ class SimpleEchoSession(Session):
         data_str = codecs.encode(os.urandom(6), "hex")
         for i in range(CLIENT_SEND_LOOPS):
             logging.info("[CLIENT] ReqNo:{},  Sending:  {}".format(i, data_str))
-            channel.write(data)
-            response = codecs.encode(channel.read(), 'hex')
+            channel.write_sync(data)
+            response = codecs.encode(channel.read_sync(), 'hex')
             logging.info("[CLIENT] ReqNo:{},  Received: {}".format(i, response))

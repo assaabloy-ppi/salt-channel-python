@@ -1,68 +1,71 @@
 """A two-way, reliable communication channel.
-Byte arrays can be read and written; a simple blocking model.
+Byte arrays can be read and written; asyncio based implementation
 """
-import io
 import struct
+import asyncio
 from abc import ABCMeta, abstractmethod
 
+import saltchannel.util as util
 from .exceptions import ComException, BadPeer
+from saltchannel.dev.client_server_a import SaltChannelStreamReader,SaltChannelStreamWriter
+
 
 class ByteChannel(metaclass=ABCMeta):
-    """Reads one message; blocks until one is available.
-    """
+
+    def __init__(self, loop=None):
+        self.loop = loop or asyncio.new_event_loop()
 
     @abstractmethod
-    def read(self):
-        """Reads one message; blocks until one is available."""
+    async def read(self):
         pass
 
     @abstractmethod
-    def write(self, msg, *args, is_last=False):
-        """Writes messages. This method may block."""
+    async def write(self, msg, *args, is_last=False):
+        pass
+
+#    @abstractmethod
+    def read_sync(self):
+        pass
+
+#    @abstractmethod
+    def write_sync(self, msg, *args, is_last=False):
         pass
 
 
-class StreamChannel(ByteChannel):
-    """A ByteChannel implementation based on a pair of streams."""
+class AsyncioChannel(ByteChannel, metaclass=util.Syncizer):
+    def __init__(self, reader, writer, loop=None):
+        """
+        reader - instance of dev/client_server_a/SaltChannelStreamReader()
+        writer - instance of dev/client_server_a/SaltChannelStreamWriter()
+        """
+        super().__init__(loop=loop)
+        self.reader = reader
+        self.writer = writer
 
-    def __init__(self, in_stream, out_stream=None):
-        if not out_stream:
-            self.io = in_stream
-        else:
-            self.io = io.BufferedRWPair(in_stream, out_stream)
+    async def read(self):
+        return await self.reader.read_msg()
 
-    def read(self):
-        try:
-           len_buf = self.io.read(4)
-           if not len_buf:
-               raise ComException("Unable to recv size prefix. NOT all requested data were obtained")
-           msg_len = struct.unpack('<i', len_buf)
-           msg = self.io.read(msg_len[0])
-        except IOError as e:
-            raise ComException(e)
+    async def write(self, msg, *args, is_last=False):
+        for m in (msg,) + args:
+            self.writer.write_msg(m)
+        await self.writer.drain()
 
-    def write(self, message, *args, is_last=False):
-        try:
-            for msg in (message,) + args:
-                mbytes = bytes(msg)
-                self.io.write(struct.pack('<i', len(mbytes)))
-                self.io.write(mbytes)
-            self.io.flush()
-        except IOError as e:
-            raise ComException(e)
+    def close(self):
+        self.writer.close()
 
 
 class SocketChannel(ByteChannel):
     def __init__(self, sock):
-        #self.io = io.BufferedRWPair(sock.makefile('rb'), sock.makefile('wb'))
         self.sock = sock
 
-    def read(self):
+    async def read(self):
+        return self.read_sync()  # blocking version!
+
+    async def write(self, msg, *args, is_last=False):
+        self.write_sync(msg, *args, is_last=is_last)  # blocking version!
+
+    def read_sync(self):
         try:
-           #size_prefix = struct.unpack('<i', self.sock.recv(4))
-           #if size_prefix[0] < 0:
-           #    raise BadPeer("non-positive packet size, ", size_prefix[0])
-           #return self.sock.recv(size_prefix[0])
            len_buf, success = self.recvall(4)
            if not success:
                raise ComException("Unable to recv size prefix. NOT all requested data were obtained")
@@ -74,7 +77,7 @@ class SocketChannel(ByteChannel):
         except Exception as e:
             raise ComException(e)
 
-    def write(self, message, *args, is_last=False):
+    def write_sync(self, message, *args, is_last=False):
         raw = bytearray()
         try:
             for msg in (message,) + args:
@@ -92,8 +95,3 @@ class SocketChannel(ByteChannel):
             buf.extend(newbuf)
             count -= len(newbuf)
         return (bytes(buf), True)
-
-
-class PipeChannel(ByteChannel):
-    """ByteChannel implementation based on 'multiprocessing' module's Pipes"""
-    pass

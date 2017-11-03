@@ -13,9 +13,10 @@ logging.getLogger().setLevel(logging.INFO)
 
 CLIENT_NUM = 3
 
-def main():
-    print()
 
+def main():
+
+    print()
     csa = ClientServerPairA(SimpleEchoSessionA(), CLIENT_NUM)
     csa.start_server()
 

@@ -1,5 +1,7 @@
+import asyncio
 from ..saltlib import SaltLib
 from ..saltlib.saltlib_base import SaltLibBase
+import saltchannel.util as util
 from ..util.time import NullTimeChecker, NullTimeKeeper
 from ..util.key_pair import KeyPair
 from . import packets
@@ -9,17 +11,14 @@ from .encrypted_channel_v2 import EncryptedChannelV2, Role
 from .app_channel_v2 import AppChannelV2
 
 
-class SaltClientSession:
+class SaltClientSession(metaclass=util.Syncizer):
     """Client-side implementation of a Salt Channel v2 session.
-    Usage: create object, set or create ephemeral key,
-    call handshake(), get resulting encrypted channel (getChannel())
-    to use by application layer. Use getServerSigKey() to get the server's pubkey.
-    Do not reuse the object for more than one Salt Channel session.
-    Limitation: does not support virtual servers, just one pubkey supported.
-    For debug/inspection: the handshake messages (m1, m2, m3, m4) are stored.
+    Asyncio-based implementation
     """
 
-    def __init__(self, sig_keypair, clear_channel):
+    def __init__(self, sig_keypair, clear_channel, loop=None):
+        self.loop = loop or asyncio.new_event_loop()
+
         self.saltlib = SaltLib()
         self.sig_keypair = sig_keypair
 
@@ -43,23 +42,23 @@ class SaltClientSession:
         self.m3 = None
         self.m4 = None
 
-    def handshake(self):
+    async def handshake(self):
         self.validate()
-        self.do_m1()
+        await self.do_m1()
 
-        (success, recv_chunk) = self.do_m2()
+        (success, recv_chunk) = await self.do_m2()
         if not success:
-            #self.tt1(recv_chunk)
+            #await self.tt1(recv_chunk)
             return
 
         self.create_encrypted_channel()
-        self.do_m3()
+        await self.do_m3()
         self.validate_signature1()
-        self.do_m4()
-        #self.tt2()
+        await self.do_m4()
+        #await self.tt2()
 
 
-    def do_m1(self):
+    async def do_m1(self):
         """Creates and writes M1 message."""
         self.m1 = packets.M1Packet()
         self.m1.create_opt_fields()
@@ -69,12 +68,12 @@ class SaltClientSession:
         m1_raw = bytes(self.m1)
         self.m1_hash = self.saltlib.sha512(m1_raw)
 
-        self.clear_channel.write(m1_raw)
+        await self.clear_channel.write(m1_raw)
 
 
-    def do_m2(self):
+    async def do_m2(self):
         """Read m2 with fallback to raw chunk if no M2 packet type detected in Header."""
-        clear_chunk = self.clear_channel.read()
+        clear_chunk = await self.clear_channel.read()
         self.m2 = packets.M2Packet(src_buf=clear_chunk)
         if self.m2.data.Header.PacketType != packets.PacketType.TYPE_M2.value:
             self.m2 = None
@@ -88,29 +87,29 @@ class SaltClientSession:
 
         return (True, None)
 
-    def do_m3(self):
-        chunk = self.enc_channel.read()
+    async def do_m3(self):
+        chunk = await self.enc_channel.read()
         assert(len(chunk) == 2+4+32+64)
         self.m3 = packets.M3Packet(src_buf=chunk)
         self.time_checker.check_time(self.m3.data.Time)
 
-    def do_m4(self):
+    async def do_m4(self):
         self.m4 = packets.M4Packet()
         self.m4.data.Time = self.time_keeper.get_time()
         self.m4.ClientSigKey = self.sig_keypair.pub
-        self.m4.Signature2 = self.saltlib.sign(b''.join([packets.M4Packet.SIG2_PREFIX, self.m1_hash, self.m2_hash]),
+        self.m4.Signature2 = self.saltlib.sign(b''.join([packets.M4Packet.SIG2_PREFIX,self.m1_hash, self.m2_hash]),
                                                self.sig_keypair.sec)[:SaltLibBase.crypto_sign_BYTES]
 
         if self.buffer_M4:
             self.app_channel.buffered_m4 = self.m4
         else:
-            self.enc_channel.write(bytes(self.m4))
+            await self.enc_channel.write(bytes(self.m4))
 
     def validate_signature1(self):
         """Validates M3/Signature1."""
         try:
             self.saltlib.sign_open(b''.join([self.m3.Signature1, packets.M3Packet.SIG1_PREFIX,
-                                             self.m1_hash, self.m2_hash]), self.m3.ServerSigKey)
+                                            self.m1_hash, self.m2_hash]), self.m3.ServerSigKey)
         except saltchannel.saltlib.exceptions.BadSignatureException:
             raise saltchannel.exceptions.BadPeer("invalid signature")
 

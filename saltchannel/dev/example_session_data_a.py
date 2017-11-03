@@ -7,7 +7,7 @@ import logging
 import time
 
 from .client_server_a import ClientServerPairA
-from .mitm_channel_a import MitmChannelA
+from .mitm_channel import MitmChannel
 
 # Log all to stdout
 handler = logging.StreamHandler(sys.stdout)
@@ -18,10 +18,10 @@ logging.getLogger().setLevel(logging.INFO)
 CLIENT_NUM = 1
 
 from .client_server_a import SessionA
-from saltchannel.channel_a  import AsyncioChannel
+from saltchannel.channel  import AsyncioChannel
 
-from saltchannel.v2.salt_client_session_a import SaltClientSessionA
-from saltchannel.v2.salt_server_session_a import SaltServerSessionA
+from saltchannel.v2.salt_client_session import SaltClientSession
+from saltchannel.v2.salt_server_session import SaltServerSession
 from saltchannel.util.crypto_test_data import CryptoTestData
 from saltchannel.exceptions  import ComException
 
@@ -44,7 +44,7 @@ class ExampleSessionA(SessionA):
 
         channel = AsyncioChannel(reader, writer)
 
-        sssa = SaltServerSessionA(self.server_sig_keypair, channel)
+        sssa = SaltServerSession(self.server_sig_keypair, channel)
         sssa.enc_keypair = self.server_enc_keypair
         sssa.buffer_m2 = False
         await sssa.handshake()
@@ -59,9 +59,9 @@ class ExampleSessionA(SessionA):
     async def client_session(self, reader, writer):
         """Client-side session implementation for basic handshake (async!)"""
         ch = AsyncioChannel(reader, writer)
-        channel = MitmChannelA(ch, log=logging.getLogger(__name__))  # maybe better to move this to client_server_a.py
+        channel = MitmChannel(ch, log=logging.getLogger(__name__))  # maybe better to move this to client_server_a.py
 
-        scsa = SaltClientSessionA(self.client_sig_keypair, channel)
+        scsa = SaltClientSession(self.client_sig_keypair, channel)
         scsa.enc_keypair = self.client_enc_keypair
         scsa.buffer_M4 = False
 

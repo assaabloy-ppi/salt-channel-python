@@ -1,9 +1,9 @@
 import struct
 import logging
-import asyncio.coroutines as coroutines
 import asyncio
 import asyncio.events as events
 import asyncio.streams as streams
+import asyncio.coroutines as coroutines
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from abc import ABCMeta, abstractmethod
 
@@ -84,6 +84,7 @@ class ClientServerPairA:
     async def _client_session_wrap(self, loop=None):
         reader, writer = await open_saltchannel_connection('127.0.0.1', 8888, loop=loop)
         await self.session.client_session(reader, writer)
+
 
     def _spawn_client_process(self):
         new_loop = asyncio.new_event_loop()
