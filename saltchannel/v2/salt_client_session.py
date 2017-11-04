@@ -3,7 +3,6 @@ from ..saltlib import SaltLib
 from ..saltlib.saltlib_base import SaltLibBase
 import saltchannel.util as util
 from ..util.time import NullTimeChecker, NullTimeKeeper
-from ..util.key_pair import KeyPair
 from . import packets
 
 import saltchannel.saltlib.exceptions
@@ -15,7 +14,6 @@ class SaltClientSession(metaclass=util.Syncizer):
     """Client-side implementation of a Salt Channel v2 session.
     Asyncio-based implementation
     """
-
     def __init__(self, sig_keypair, clear_channel, loop=None):
         self.loop = loop or asyncio.new_event_loop()
 
@@ -48,15 +46,12 @@ class SaltClientSession(metaclass=util.Syncizer):
 
         (success, recv_chunk) = await self.do_m2()
         if not success:
-            #await self.tt1(recv_chunk)
             return
 
         self.create_encrypted_channel()
         await self.do_m3()
         self.validate_signature1()
         await self.do_m4()
-        #await self.tt2()
-
 
     async def do_m1(self):
         """Creates and writes M1 message."""

@@ -36,7 +36,6 @@ class ExampleSession(Session):
         """Server-side session implementation for basic handshake"""
         try:
             while True:
-                #msg = channel.read()
                 sss = SaltServerSession(self.server_sig_keypair, channel)
                 sss.enc_keypair = self.server_enc_keypair
                 sss.buffer_m2 = True
@@ -47,8 +46,6 @@ class ExampleSession(Session):
                     logging.info("LastFlag detected in client's message. Server decides to close current connection.")
                     return
 
-                #if not msg:
-                #    return # client closed socket
         except ComException:
             logging.info("Server detected closed connection")
 
@@ -93,17 +90,22 @@ class ExampleSession(Session):
         print("TOTAL BYTES: ", cnt_write + cnt_read)
         print("\n ---------------------------------------------------------------------\n")
 
+
 def main():
+
     print()
     logging.info(os.path.basename(__file__) + " starting...")
     cs = MpClientServerPair(ExampleSession())
     cs.start_server()
+
     print()
     ses_time = (1000/SESSION_NUM) * timeit.Timer(functools.partial(cs.run_sessions, SESSION_NUM)).timeit(1)
+
     print()
     logging.info("Session finished.")
     logging.info("Average client session runtime: {:.6f} ms".format(ses_time))
     cs.stop_server()
+
 
 if __name__ == '__main__':
     main()

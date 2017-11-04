@@ -37,8 +37,8 @@ class EncryptedChannelV2(ByteChannel):
     The read/write methods throws ComException for low-level IO errors
     and BadPeer if the data format is not OK or if the data is not
     encrypted properly.
-    Asyncio-friendly implementation"""
-
+    Asyncio-friendly implementation
+    """
     def __init__(self, channel, key, role, session_nonce=bytes(TTPacket.SESSION_NONCE_SIZE), loop=None):
         super().__init__(loop=loop)
         self.saltlib = SaltLib().getLib()  # refactor to self.salt ?

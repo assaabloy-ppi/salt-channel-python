@@ -67,8 +67,6 @@ class Packet(metaclass=ABCMeta):
         """Check packet for consistency. Raise BadPeer() inside if something is wrong"""
         if self.data.Header.PacketType != type(self).TYPE:
             raise BadPeer("bad packet type: ", self.data.Header.PacketType)
-        #if self.data.Time > 0x7fffffff:
-        #    raise BadPeer("Time field range is invalid")
 
     def from_bytes(self, src, validate=True):
         self.data.from_bytes(src)

@@ -7,7 +7,6 @@ from abc import ABCMeta, abstractmethod
 
 import saltchannel.util as util
 from .exceptions import ComException, BadPeer
-from saltchannel.dev.client_server_a import SaltChannelStreamReader,SaltChannelStreamWriter
 
 
 class ByteChannel(metaclass=ABCMeta):
@@ -59,10 +58,10 @@ class SocketChannel(ByteChannel):
         self.sock = sock
 
     async def read(self):
-        return self.read_sync()  # blocking version!
+        return self.read_sync()  # blocking version inside!
 
     async def write(self, msg, *args, is_last=False):
-        self.write_sync(msg, *args, is_last=is_last)  # blocking version!
+        self.write_sync(msg, *args, is_last=is_last)  # blocking version inside!
 
     def read_sync(self):
         try:

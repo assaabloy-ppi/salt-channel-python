@@ -1,11 +1,8 @@
-import logging
-import pprint
 import asyncio
 
 from ..saltlib import SaltLib
 from ..saltlib.saltlib_base import SaltLibBase
 from ..util.time import NullTimeChecker, NullTimeKeeper
-from ..util.key_pair import KeyPair
 from .packets import *
 from saltchannel.a1a2.packets import *
 import saltchannel.util as util
@@ -19,7 +16,6 @@ class SaltServerSession(metaclass=util.Syncizer):
     """Server-side implementation of a Salt Channel v2 session.
     Asyncio-based implementation
     """
-
     def __init__(self, sig_keypair, clear_channel, loop=None):
         self.loop = loop or asyncio.new_event_loop()
         

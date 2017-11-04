@@ -62,7 +62,6 @@ class MpClientServerPair(ClientServerPair):
 
     def __init__(self, session):
         super(MpClientServerPair, self).__init__(session)
-        #self.chaSocketChannel(sock)
 
     def start_server(self):
         self.server = MpClientServerPair.TestTCPServer(("localhost", 0), self._server_handler_factory(self.session))

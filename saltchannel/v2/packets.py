@@ -1,14 +1,11 @@
-from enum import Enum
-from ctypes import *
-from abc import ABCMeta
-
 from ..exceptions import BadPeer as BadPeer
 from saltchannel.util.packets import *
 import saltchannel.util as util
 
 
 class M1Packet(Packet):
-    """Data of the M1 message, low-level serialization/deserialization."""
+    """Data of the M1 message, low-level serialization/deserialization.
+    """
     TYPE = PacketType.TYPE_M1.value
 
     class _M1PacketBody(SmartStructure):
@@ -74,7 +71,8 @@ class M1Packet(Packet):
 
 
 class M2Packet(Packet):
-    """Data of the M2 message, low-level serialization/deserialization."""
+    """Data of the M2 message, low-level serialization/deserialization.
+    """
     TYPE = PacketType.TYPE_M2.value
 
     class _M2PacketBody(SmartStructure):
@@ -108,7 +106,8 @@ class M2Packet(Packet):
 
 
 class M3Packet(Packet):
-    """Data of the M3 message, low-level serialization/deserialization."""
+    """Data of the M3 message, low-level serialization/deserialization.
+    """
     TYPE = PacketType.TYPE_M3.value
     SIG1_PREFIX = b'SC-SIG01'
 
@@ -132,7 +131,8 @@ class M3Packet(Packet):
 
 
 class M4Packet(Packet):
-    """Data of the M4 message, low-level serialization/deserialization."""
+    """Data of the M4 message, low-level serialization/deserialization.
+    """
     TYPE = PacketType.TYPE_M4.value
     SIG2_PREFIX = b'SC-SIG02'
 
@@ -156,7 +156,8 @@ class M4Packet(Packet):
 
 
 class EncryptedPacket(Packet):
-    """Encrypted container for M3/M4/AppPacket. """
+    """Encrypted container for M3/M4/AppPacket.
+    """
     TYPE = PacketType.TYPE_ENCRYPTED_PACKET.value
 
     class _EncryptedPacketBody(SmartStructure):
@@ -257,6 +258,6 @@ class AppPacket(Packet):
         self.opt = self._opt_factory(body=value, data_field_len=len(value))
         self.opt.Data = util.cbytes(value)
 
-# leaved here for now
+# leave here for now
 class TTPacket(Packet):
     SESSION_NONCE_SIZE = 8

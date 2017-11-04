@@ -36,7 +36,6 @@ class ExampleSessionA(SessionA):
         self.client_sig_keypair = CryptoTestData.aSig
         self.client_enc_keypair = CryptoTestData.aEnc
 
-
     async def server_session(self, reader, writer):
         """Server-side session implementation for basic handshake (async!)"""
         addr = writer.get_extra_info('peername')
@@ -100,15 +99,13 @@ class ExampleSessionA(SessionA):
         print("TOTAL BYTES: ", cnt_write + cnt_read)
         print("\n ---------------------------------------------------------------------\n")
 
-        # empty msg mean session end
-        #await channel.write(b'')
         logging.info('Client closing the socket')
         channel.close()
 
 
 def main():
-    print()
 
+    print()
     csa = ClientServerPairA(ExampleSessionA(), CLIENT_NUM)
     csa.start_server()
 

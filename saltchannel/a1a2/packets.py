@@ -105,11 +105,6 @@ class A2Packet(Packet):
                         ("P2", c_uint8 * A2Packet.P_SIZE)]
             proto_re = re.compile(r'^[-./\w]+$')  # used for p-string validation
 
-            #def __init__(self, P1=A2Packet.SC2_PROT_STRING, P2=A2Packet.UNSPECIFIED_PROT_STRING):
-            #    super().__init__(P1, P2)
-            #    self.data.P1 = util.cbytes(P1)
-            #    self.data.P2 = util.cbytes(P2)
-
             def validate(self):
                 if len(self.P1) != A2Packet.P_SIZE or len(self.P2) != A2Packet.P_SIZE:
                     return False

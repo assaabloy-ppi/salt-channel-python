@@ -6,8 +6,8 @@ from .packets import AppPacket
 class AppChannelV2(ByteChannel, metaclass=util.Syncizer):
     """An app message channel on top of an underlying ByteChannel (EncryptedChannelV2).
     Adds small header to messages.
-    Asyncio-friendly implementation"""
-
+    Asyncio-friendly implementation
+    """
     def __init__(self, channel, time_keeper, time_checker, loop=None):
         super().__init__(loop=loop)
         self.channel = channel

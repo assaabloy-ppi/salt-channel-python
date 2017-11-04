@@ -108,7 +108,7 @@ class ClientServerPairA:
         SERVER = LOOP.run_until_complete(coro)
         logging.info('Serving on {}'.format(SERVER.sockets[0].getsockname()))
 
-    def run_sessions(self, jitter=True):
+    def run_sessions(self):
         global LOOP
         self.is_session_active = True
         try:
