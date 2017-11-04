@@ -41,6 +41,8 @@ class SaltServerSession(metaclass=util.Syncizer):
         self.m2_hash = b''
         self.m4 = None
 
+        self.is_done = False
+
         self.buffer_m2 = False
         self.client_sig_key = None
 
@@ -50,7 +52,10 @@ class SaltServerSession(metaclass=util.Syncizer):
 
         if not valid_m1:
             await self.do_a2(recv_chunk)
+            self.is_done = True
             return
+
+        self.validate()
 
         if resumed:
             return
