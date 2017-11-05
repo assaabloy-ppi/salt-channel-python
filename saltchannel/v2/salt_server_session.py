@@ -16,8 +16,9 @@ class SaltServerSession(metaclass=util.Syncizer):
     """Server-side implementation of a Salt Channel v2 session.
     Asyncio-based implementation
     """
+
     def __init__(self, sig_keypair, clear_channel, loop=None):
-        self.loop = loop or asyncio.new_event_loop()
+        self.loop = util.force_event_loop(loop=loop)
         
         self.saltlib = SaltLib()
         self.sig_keypair = sig_keypair

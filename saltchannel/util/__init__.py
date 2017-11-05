@@ -10,6 +10,15 @@ def cbytes(src):
     return (ctypes.c_uint8 * len(bytes(src)))(*list((bytes(src))))
 
 
+def force_event_loop(loop=None):
+    try:
+        loop2 = loop or asyncio.get_event_loop()
+    except RuntimeError:  # RuntimeError: There is no current event loop in thread 'Thread-x'.
+        loop2 = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop2)
+    return loop2
+
+
 class Singleton(type):
     _instances = {}
     def __call__(cls, *args, **kwargs):
@@ -51,5 +60,4 @@ class Syncizer(ABCMeta):
         def sync_func(self, *args, **kwargs):
             meth = getattr(self, func)
             return self.loop.run_until_complete(meth(*args, **kwargs))
-            #return asyncio.new_event_loop().run_until_complete(meth(*args, **kwargs))
         return sync_func

@@ -2,6 +2,7 @@ import asyncio
 import time
 from enum import Enum
 
+from ..channel import ByteChannel
 from collections import deque, namedtuple
 
 
@@ -14,14 +15,14 @@ class MitmEventType(Enum):
     DELAY = 4
 
 
-class MitmChannel():
+class MitmChannel(ByteChannel):
     """Man-in-the-Middle log/delay/manipulation class. Decorator pattern.
     """
     class LogRecord(namedtuple('LogRecord', ['time', 'type', 'data'])):
         __slots__ = ()
 
     def __init__(self, orig, log=None, loop=None):
-        self.loop = loop or asyncio.new_event_loop()
+        super().__init__(loop=loop)
 
         self.orig = orig
         self.log = log

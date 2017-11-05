@@ -5,7 +5,7 @@ from . import packets
 class A1ClientSession:
     """"""
     def __init__(self, channel, loop=None):
-        self.loop = loop or asyncio.new_event_loop()
+        self.loop = loop or asyncio.get_event_loop()
 
         self.channel = channel
         self.a1 = packets.A1Packet()

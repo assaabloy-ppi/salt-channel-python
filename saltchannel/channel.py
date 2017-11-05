@@ -12,7 +12,9 @@ from .exceptions import ComException, BadPeer
 class ByteChannel(metaclass=ABCMeta):
 
     def __init__(self, loop=None):
-        self.loop = loop or asyncio.new_event_loop()
+        # if channel will be used in sync context, need to create local asyncio loop
+        # since internally it may still use asyncio
+        self.loop = util.force_event_loop(loop=loop)
 
     @abstractmethod
     async def read(self):

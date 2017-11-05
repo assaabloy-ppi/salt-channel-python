@@ -15,7 +15,7 @@ class SaltClientSession(metaclass=util.Syncizer):
     Asyncio-based implementation
     """
     def __init__(self, sig_keypair, clear_channel, loop=None):
-        self.loop = loop or asyncio.new_event_loop()
+        self.loop = loop or asyncio.get_event_loop()
 
         self.saltlib = SaltLib()
         self.sig_keypair = sig_keypair
