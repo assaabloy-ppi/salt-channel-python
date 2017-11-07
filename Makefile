@@ -1,10 +1,10 @@
 .DEFAULT_GOAL := help
-.PHONY: help test clean bootstrap run_echo_session asyncrun_echo_session
+.PHONY: any
 
 help: Makefile
 	@echo "\nUsage: make <target>"
 	@echo "\twhere <target> is one of the following:\n"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST)  | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[0-9a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST)  | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 	@echo
 
 test: ## Run all unittests
@@ -39,8 +39,14 @@ run_simple_echo_session: ## Run session 'dev/SimpleEchoSession.py' within local 
 run_simple_echo_session_a: ## Run asyncio version of 'run_simple_echo_session' target
 	_virtualenv/bin/python3 -m saltchannel.dev.run_session_a
 
-run_example_session_data: ## Run 'dev/example_session_data.py' to dump basic hansdhake data
-	_virtualenv/bin/python3 -m saltchannel.dev.example_session_data
+run_example_session1: ## Run 'dev/example_session1.py' to dump basic hansdhake data
+	_virtualenv/bin/python3 -m saltchannel.dev.example_session1
 
-run_example_session_data_a: ## Run 'dev/example_session_data_a.py' to dump basic hansdhake data (async!)
-	_virtualenv/bin/python3 -m saltchannel.dev.example_session_data_a
+run_example_session1_a: ## Run 'dev/example_session1_a.py' to dump basic hansdhake data (async!)
+	_virtualenv/bin/python3 -m saltchannel.dev.example_session1_a
+
+run_example_session2: ## Run 'dev/example_session2.py' to dump A1-A2 protocol
+	_virtualenv/bin/python3 -m saltchannel.dev.example_session2
+
+run_example_session2_a: ## Run 'dev/example_session2_a.py' to dump A1-A2 protocol
+	_virtualenv/bin/python3 -m saltchannel.dev.example_session2_a

@@ -56,7 +56,7 @@ class ExampleSession(Session):
         scs.buffer_M4 = True
 
         # print session initial details to stdout
-        print("======== example_session_data.py ========")
+        print("======== example_session1.py ========")
         print("\nclient signature key pair:\n" + str(self.client_sig_keypair))
         print("\nclient encryption key pair:\n" + str(self.client_enc_keypair))
         print("\nserver signature key pair:\n" + str(self.server_sig_keypair))

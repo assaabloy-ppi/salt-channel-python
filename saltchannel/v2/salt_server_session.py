@@ -37,6 +37,7 @@ class SaltServerSession(metaclass=util.Syncizer):
         self.m2 = None
         self.m2_hash = b''
         self.m4 = None
+        self.a2 = None
 
         self.is_done = False
 
@@ -66,19 +67,22 @@ class SaltServerSession(metaclass=util.Syncizer):
 
     async def do_a2(self, data_chunk):
         a1 = A1Packet(src_buf=data_chunk)
-        a2 = A2Packet(case=A2Packet.Case.A2_NO_SUCH_SERVER
-                                if a1.AddressType == A1Packet.ADDRESS_TYPE_PUBKEY and
-                                   a1.Address != self.sig_keypair.pub
-                                else A2Packet.Case.A2_DEFAUT)
+        if a1.AddressType == A1Packet.ADDRESS_TYPE_PUBKEY and a1.Address != self.sig_keypair.pub:
+            a2 = A2Packet(case=A2Packet.Case.A2_NO_SUCH_SERVER)
+        elif self.a2:
+            a2 = self.a2  # use injected a2
+        else:
+            a2 = A2Packet(case=A2Packet.Case.A2_DEFAUT)
+
         await self.clear_channel.write(bytes(a2), is_last=True)
 
     async def do_m1(self):
         """Returns tuple (valid_m1, resumed, read_chunk)"""
         clear_chunk = await self.clear_channel.read()
 
-        self.m1 = M1Packet(src_buf=clear_chunk)
-
-        if self.m1.data.Header.PacketType != PacketType.TYPE_M1.value:
+        try:
+            self.m1 = M1Packet(src_buf=clear_chunk)
+        except BadPeer:
             self.m1 = None
             return (False, False, clear_chunk)  # it' not M1, falling back...
 
