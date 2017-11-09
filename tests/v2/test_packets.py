@@ -319,5 +319,47 @@ class TestAppPacket(BaseTest):
             app.from_bytes(bytes(5))
 
 
+class TestMultiAppPacket(BaseTest):
+
+    def test_MultiAppPacket_properties1(self):
+        mapp = packets.MultiAppPacket()
+
+        msg0 = b'12'
+        msg1 = b'3456'
+        msg2 = b''
+        msg3 = b'\x00'
+        msg4 = b'7'
+        messages = [msg0, msg1, msg2, msg3, msg4]
+
+        mapp.data.Count = len(messages)
+        mapp.create_opt_fields(msgs=messages)
+
+        self.assertEqual(mapp.opt.Message, messages)
+        self.assertEqual(mapp.opt.Message[1], msg1)
+
+    def test_MultiAppPacket_serialization(self):
+        mapp = packets.MultiAppPacket()
+
+        msg0 = b'12'
+        msg1 = b'3456'
+        msg2 = b''
+        msg3 = b'\x00'
+        msg4=  b'7'
+        messages = [msg0, msg1, msg2, msg3, msg4]
+
+        mapp.data.Count = len(messages)
+        mapp.create_opt_fields(msgs=messages)
+
+        self.assertEqual(mapp.opt.Message, messages)
+
+        # serialization/deserialization basic test
+        mappb = packets.MultiAppPacket()
+        mappb.from_bytes(bytes(mapp))
+
+        self.assertEqual(mappb.opt.Message, messages)
+
+
+
+
 if __name__ == '__main__':
     unittest.main()

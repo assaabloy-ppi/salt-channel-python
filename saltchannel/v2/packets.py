@@ -1,3 +1,4 @@
+import struct
 from ..exceptions import BadPeer as BadPeer
 from saltchannel.util.packets import *
 import saltchannel.util as util
@@ -257,6 +258,70 @@ class AppPacket(Packet):
     def Data(self, value):
         self.opt = self._opt_factory(body=value, data_field_len=len(value))
         self.opt.Data = util.cbytes(value)
+
+
+class MultiAppPacket(Packet):
+    TYPE = PacketType.TYPE_MULTIAPP_PACKET.value
+
+    class _MultiAppPacketBody(SmartStructure):
+        class _MultiAppPacketHeader(SmartStructure):
+            # MultiAppPacket header fields
+            _fields_ = [('PacketType', c_uint8),
+                        ('_reserved', c_uint8)]
+
+        # MultiAppPacket body fields
+        _fields_ = [('Header', _MultiAppPacketHeader),
+                    ('Time', c_uint32),
+                    ('Count', c_uint16)]
+
+    def _opt_factory(self, body=None, msgs=None):  # msgs is dict of bytearrays
+        if not body:
+            return Packet._EmptyBodyOpt()
+
+        if msgs:
+            if len(msgs) < 1:
+                raise BadPeer("'Count' field size requested is too small: ", len(msgs))
+
+        class _MultiAppPacketBodyOpt:
+            def __init__(self, msgs=None):
+                self.Message = msgs
+
+            def from_bytes(self, src, count=None, validate=True):
+                self.Message = []
+                if not count:
+                    return
+                # deserialize manually now
+                cnt = offset = 0
+                while cnt < count:
+                    length_field = c_uint16.from_buffer_copy(src, offset)
+                    offset += sizeof(c_uint16)
+                    self.Message.append(src[offset:offset+length_field.value])
+                    offset += length_field.value
+                    cnt += 1
+
+            def __bytes__(self):
+                raw = bytearray()
+                for msg in self.Message:
+                    raw.extend(b''.join([c_uint16(len(msg)), bytes(msg)]))
+                return bytes(raw)
+
+        return _MultiAppPacketBodyOpt(msgs=msgs)
+
+
+    def __init__(self, src_buf=None):
+        super().__init__()
+        self.data = MultiAppPacket._MultiAppPacketBody()
+        self.data.Header.PacketType = type(self).TYPE
+        if src_buf:
+            self.from_bytes(src_buf)
+
+    def from_bytes(self, src, validate=True):
+        self.data.from_bytes(src)
+        self.opt = self._opt_factory(body=src, msgs=None)
+        self.opt.from_bytes(src[self.data.size:], count=self.data.Count)
+        if validate:
+            self.validate()
+
 
 # leave here for now
 class TTPacket(Packet):

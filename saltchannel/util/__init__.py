@@ -4,11 +4,10 @@ import ctypes
 from abc import ABCMeta
 import asyncio
 
-
 def cbytes(src):
     """Convert bytes-like array to ctypes array of c_uint8."""
-    return (ctypes.c_uint8 * len(bytes(src)))(*list((bytes(src))))
-
+    #return (ctypes.c_uint8 * len(bytes(src)))(*list((bytes(src))))
+    return (ctypes.c_uint8 * len(bytes(src))).from_buffer_copy(src)
 
 def force_event_loop(loop=None):
     try:
