@@ -236,12 +236,12 @@ class AppPacket(Packet):
             _fields_ = [('Data', c_uint8 * data_field_len)]
         return _AppPacketBodyOpt()
 
-    def __init__(self, src_buf=None):
+    def __init__(self, src_buf=None, validate=True):
         super().__init__()
         self.data = AppPacket._AppPacketBody()
         self.data.Header.PacketType = type(self).TYPE
         if src_buf:
-            self.from_bytes(src_buf)
+            self.from_bytes(src_buf, validate=validate)
 
     def from_bytes(self, src, validate=True):
         self.data.from_bytes(src)
@@ -262,6 +262,7 @@ class AppPacket(Packet):
 
 class MultiAppPacket(Packet):
     TYPE = PacketType.TYPE_MULTIAPP_PACKET.value
+    MAX_SIZE = 65535
 
     class _MultiAppPacketBody(SmartStructure):
         class _MultiAppPacketHeader(SmartStructure):
@@ -314,12 +315,12 @@ class MultiAppPacket(Packet):
         return _MultiAppPacketBodyOpt(msgs=msgs)
 
 
-    def __init__(self, src_buf=None):
+    def __init__(self, src_buf=None, validate=True):
         super().__init__()
         self.data = MultiAppPacket._MultiAppPacketBody()
         self.data.Header.PacketType = type(self).TYPE
         if src_buf:
-            self.from_bytes(src_buf)
+            self.from_bytes(src_buf, validate=validate)
 
     def from_bytes(self, src, validate=True):
         self.data.from_bytes(src)
@@ -328,6 +329,16 @@ class MultiAppPacket(Packet):
         if validate:
             self.validate()
 
+    def validate(self):
+        super().validate()
+        if self.data.Count < 1:
+            raise BadPeer("'Count' field is too small: ", self.data.Count)
+        if len(self.opt.Message) != self.data.Count:
+            raise BadPeer("len(Message) != Count, {} != {}".format(len(self.opt.Message), self.data.Count))
+
+    @staticmethod
+    def should_use(msgs):
+        return False if len(msgs) < 2 or any(len(msg) > MultiAppPacket.MAX_SIZE for msg in msgs) else True
 
 # leave here for now
 class TTPacket(Packet):
