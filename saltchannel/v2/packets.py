@@ -305,6 +305,12 @@ class MultiAppPacket(Packet):
                     raw.extend(b''.join([c_uint16(len(msg)), bytes(msg)]))
                 return bytes(raw)
 
+            def __sizeof__(self):
+                return len(bytes(self))
+
+            def __len__(self):
+                return len(bytes(self))
+
         return _MultiAppPacketBodyOpt(msgs=msgs)
 
 

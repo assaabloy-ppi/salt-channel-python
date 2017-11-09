@@ -344,7 +344,7 @@ class TestMultiAppPacket(BaseTest):
         msg1 = b'3456'
         msg2 = b''
         msg3 = b'\x00'
-        msg4=  b'7'
+        msg4 = b'7'
         messages = [msg0, msg1, msg2, msg3, msg4]
 
         mapp.data.Count = len(messages)
@@ -358,7 +358,35 @@ class TestMultiAppPacket(BaseTest):
 
         self.assertEqual(mappb.opt.Message, messages)
 
+    def test_MultiAppPacket_dumps_case1(self):
+        # MultiApp CASE: 1
+        # sizeof(MultiApp): 15, MultiApp: '0b000df0ad7b020001000402000505'
+        mp_strdump = '0b000df0ad7b020001000402000505'
+        mp_dump = bytes.fromhex(mp_strdump)
 
+        messages = [b'\x04', b'\x05\x05']
+
+        mp = packets.MultiAppPacket()
+        mp.data.Time = 0x7badf00d
+        mp.data.Count = len(messages)
+        mp.create_opt_fields(msgs=messages)
+
+        self.assertEqual(mp.size, 15)
+        self.assertEqual(bytes(mp), mp_dump)
+
+        # creating MultiAppPacket from bytes
+        mpb = packets.MultiAppPacket()
+        mpb.from_bytes(mp_dump)
+
+        self.assertEqual(mpb.size, 15)
+        self.assertEqual(bytes(mpb), mp_dump)
+
+        self.assertEqual(packets.PacketType.TYPE_MULTIAPP_PACKET.value, mp.data.Header.PacketType, mpb.data.Header.PacketType)
+        self.assertEqual(mpb.data.Time, 0x7badf00d)
+        self.assertEqual(mpb.data.Count, 2)
+        self.assertEqual(len(mpb.opt.Message), mpb.data.Count)
+        self.assertEqual(mpb.opt.Message[0], b'\x04')
+        self.assertEqual(mpb.opt.Message[1], b'\x05\x05')
 
 
 if __name__ == '__main__':
