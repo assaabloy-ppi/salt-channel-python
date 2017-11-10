@@ -28,7 +28,7 @@ from saltchannel.exceptions  import ComException
 
 class ExampleSessionA(SessionA):
     """Client session + server sessions asyncio coroutines implementing same protocol as:
-    https://github.com/assaabloy-ppi/salt-channel/blob/master/src/saltchannel/dev/ExampleSessionData.java"""
+    https://github.com/assaabloy-ppi/salt-channel/blob/master/src/saltchannel/dev/ExampleSession1.java"""
 
     def __init__(self):
         self.server_sig_keypair = CryptoTestData.bSig

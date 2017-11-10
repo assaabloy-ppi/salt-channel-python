@@ -48,5 +48,11 @@ run_example_session1_a: ## Run 'dev/example_session1_a.py' to dump basic hansdha
 run_example_session2: ## Run 'dev/example_session2.py' to dump A1-A2 protocol
 	_virtualenv/bin/python3 -m saltchannel.dev.example_session2
 
-run_example_session2_a: ## Run 'dev/example_session2_a.py' to dump A1-A2 protocol
+run_example_session2_a: ## Run 'dev/example_session2_a.py' to dump A1-A2 protocol (async!)
 	_virtualenv/bin/python3 -m saltchannel.dev.example_session2_a
+
+run_example_session3: ## Run 'dev/example_session3.py' to handshake, echo with AppPacket echo+close with MultiAppPacket
+	_virtualenv/bin/python3 -m saltchannel.dev.example_session3
+
+run_example_session3_a: ## Run 'dev/example_session3_a.py' to to handshake, echo with AppPacket echo+close with MultiAppPacket (async!)
+	_virtualenv/bin/python3 -m saltchannel.dev.example_session3_a
