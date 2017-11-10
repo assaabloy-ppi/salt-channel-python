@@ -6,13 +6,20 @@ Python 3 implementation of Salt Channel v2.
 Usage
 ======
 
-After repo cloning to initialize virtualenv:
+After repo cloning to initialize virtualenv use:
 
 `make bootstrap`
 
-For list of current options available, just:
+For list of current options available, use:
 
 `make`
+
+
+Status
+======
+
+Current implementation is SaltChannel v2-draft8 compliant
+See: https://github.com/assaabloy-ppi/salt-channel/blob/master/files/spec/salt-channel-v2-draft8.md
 
 
 Package 'saltlib'
