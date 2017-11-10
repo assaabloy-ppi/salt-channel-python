@@ -18,7 +18,8 @@ For list of current options available, use:
 Status
 ======
 
-Current implementation is SaltChannel v2-draft8 compliant
+Current implementation is SaltChannel v2-draft8 compliant.
+
 See: https://github.com/assaabloy-ppi/salt-channel/blob/master/files/spec/salt-channel-v2-draft8.md
 
 
