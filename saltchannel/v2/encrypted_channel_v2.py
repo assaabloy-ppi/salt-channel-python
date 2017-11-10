@@ -36,9 +36,11 @@ class EncryptedChannelV2(ByteChannel):
     """An implementation of an encrypted channel using a shared symmetric session key.
     The read/write methods throws ComException for low-level IO errors
     and BadPeer if the data format is not OK or if the data is not
-    encrypted properly."""
-
-    def __init__(self, channel, key, role, session_nonce=bytes(TTPacket.SESSION_NONCE_SIZE)):
+    encrypted properly.
+    Asyncio-friendly implementation
+    """
+    def __init__(self, channel, key, role, session_nonce=bytes(TTPacket.SESSION_NONCE_SIZE), loop=None):
+        super().__init__(loop=loop)
         self.saltlib = SaltLib().getLib()  # refactor to self.salt ?
 
         if len(key) != self.saltlib.crypto_box_SECRETKEYBYTES:
@@ -47,27 +49,29 @@ class EncryptedChannelV2(ByteChannel):
         self.key = key
         self.channel = channel
         self.pushback_msg = b''  # used for Resume feature when happens just read chunk is encrypted
+        self.last_flag = False   # LastFlag from EncryptedPacket obtained in last unwrap call
 
         self.read_nonce = Nonce(NonceType.READ, session_nonce, value= 2 if role == Role.CLIENT else 1)
         self.write_nonce = Nonce(NonceType.WRITE, session_nonce, value= 1 if role == Role.CLIENT else 2)
 
-    def read(self):
+    async def read(self):
         if self.pushback_msg:
             raw = self.pushback_msg
             self.pushback_msg = None
         else:
-            raw = self.channel.read()
+            raw = await self.channel.read()
 
         clear = self.decrypt(self.unwrap(raw))
         self.read_nonce.advance()
         return clear
 
-    def write(self, message, *args):
+    async def write(self, message, *args, is_last=False):
+        msgs = (message,) + args
         msg_list = []
-        for msg in (message,) + args:
-            msg_list.append(self.wrap(self.encrypt(msg)))
+        for i, msg in enumerate(msgs):
+            msg_list.append(self.wrap(self.encrypt(msg), is_last=(is_last and int(i) == len(msgs)-1)))
             self.write_nonce.advance()
-        self.channel.write(msg_list[0], *msg_list[1:])
+        await self.channel.write(msg_list[0], *msg_list[1:], is_last=is_last)
 
     def encrypt(self, clear):
         return self.saltlib.crypto_box_afternm(clear, bytes(self.write_nonce), self.key)
@@ -78,12 +82,16 @@ class EncryptedChannelV2(ByteChannel):
         except BadEncryptedDataException:
             raise BadPeer("invalid ciphertext, could not be decrypted")
 
-    def wrap(self, src_bytes):
+    def wrap(self, src_bytes, is_last=False):
         """Wrap encrypted bytes in EncryptedPacket"""
         ep = EncryptedPacket()
+        ep.data.Header.LastFlag = int(is_last)
         ep.Body = src_bytes
         return bytes(ep)
 
     def unwrap(self, ep_bytes):
         """Extract body from EncryptedPacket bytes"""
-        return EncryptedPacket(src_buf=ep_bytes).Body
+        ep = EncryptedPacket(src_buf=ep_bytes)
+        self.last_flag = bool(ep.data.Header.LastFlag)
+        return ep.Body
+

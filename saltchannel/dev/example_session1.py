@@ -24,7 +24,7 @@ SESSION_NUM = 1
 
 class ExampleSession(Session):
     """Expected to implement same protocol as:
-    https://github.com/assaabloy-ppi/salt-channel/blob/master/src/saltchannel/dev/ExampleSessionData.java"""
+    https://github.com/assaabloy-ppi/salt-channel/blob/master/src/saltchannel/dev/ExampleSession1.java"""
 
     def __init__(self):
         self.server_sig_keypair = CryptoTestData.bSig
@@ -36,15 +36,16 @@ class ExampleSession(Session):
         """Server-side session implementation for basic handshake"""
         try:
             while True:
-                #msg = channel.read()
                 sss = SaltServerSession(self.server_sig_keypair, channel)
                 sss.enc_keypair = self.server_enc_keypair
                 sss.buffer_m2 = True
-                sss.handshake()
-                sss.app_channel.write(sss.app_channel.read())  # echo once at app layer
+                sss.handshake_sync()
+                sss.app_channel.write_sync(sss.app_channel.read_sync())  # echo once at app layer
 
-                #if not msg:
-                #    return # client closed socket
+                if sss.app_channel.last: # client do not plan to send something more
+                    logging.info("LastFlag detected in client's message. Server decides to close current connection.")
+                    return
+
         except ComException:
             logging.info("Server detected closed connection")
 
@@ -55,21 +56,21 @@ class ExampleSession(Session):
         scs.buffer_M4 = True
 
         # print session initial details to stdout
-        print("======== example_session_data.py ========")
+        print("======== example_session1.py ========")
         print("\nclient signature key pair:\n" + str(self.client_sig_keypair))
         print("\nclient encryption key pair:\n" + str(self.client_enc_keypair))
         print("\nserver signature key pair:\n" + str(self.server_sig_keypair))
         print("\nserver encryption key pair:\n" + str(self.server_enc_keypair))
         print("\n ----------------------- client <--> server --------------------------\n")
 
-        scs.handshake()
+        scs.handshake_sync()
 
         cnt_read0 = channel.counter_read  # it's possible with MitmChannel instances only!
         cnt_write0 = channel.counter_write  # it's possible with MitmChannel instances only!
 
         app_request = bytes([0x01, 0x05, 0x05, 0x05, 0x05, 0x05])
-        scs.app_channel.write(app_request)
-        app_response = scs.app_channel.read()
+        scs.app_channel.write_sync(app_request, is_last=True)
+        app_response = scs.app_channel.read_sync()
 
         cnt_read = channel.counter_read  # it's possible with MitmChannel instances only!
         cnt_write = channel.counter_write  # it's possible with MitmChannel instances only!
@@ -89,17 +90,22 @@ class ExampleSession(Session):
         print("TOTAL BYTES: ", cnt_write + cnt_read)
         print("\n ---------------------------------------------------------------------\n")
 
+
 def main():
+
     print()
     logging.info(os.path.basename(__file__) + " starting...")
     cs = MpClientServerPair(ExampleSession())
     cs.start_server()
+
     print()
     ses_time = (1000/SESSION_NUM) * timeit.Timer(functools.partial(cs.run_sessions, SESSION_NUM)).timeit(1)
+
     print()
     logging.info("Session finished.")
     logging.info("Average client session runtime: {:.6f} ms".format(ses_time))
     cs.stop_server()
+
 
 if __name__ == '__main__':
     main()

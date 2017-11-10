@@ -1,9 +1,10 @@
-from enum import Enum
-import logging
+import asyncio
 import time
-import codecs
+from enum import Enum
+
+from ..channel import ByteChannel
 from collections import deque, namedtuple
-from saltchannel.channel import ByteChannel
+
 
 class MitmEventType(Enum):
     """MITM event type"""
@@ -14,13 +15,15 @@ class MitmEventType(Enum):
     DELAY = 4
 
 
-class MitmChannel:
-    """Man-in-the-Middle log/delay/manipulation class. Decorator pattern."""
-
+class MitmChannel(ByteChannel):
+    """Man-in-the-Middle log/delay/manipulation class. Decorator pattern.
+    """
     class LogRecord(namedtuple('LogRecord', ['time', 'type', 'data'])):
         __slots__ = ()
 
-    def __init__(self, orig, log=None):
+    def __init__(self, orig, log=None, loop=None):
+        super().__init__(loop=loop)
+
         self.orig = orig
         self.log = log
         self.queue = deque()
@@ -46,15 +49,33 @@ class MitmChannel:
                 self.queue.append(log_record)
         self.time0 = log_record.time
 
-    def read(self):
-        data = self.orig.read()
+    async def read(self):
+        data = await self.orig.read()
         self.counter_read += len(data)
         if self.log:
             self._log_event(MitmChannel.LogRecord(time=time.perf_counter(), type=MitmEventType.READ, data=data))
         return data
 
-    def write(self, msg, *args):
-        self.orig.write(msg, *args)
+    async def write(self, msg, *args, is_last=False):
+        await self.orig.write(msg, *args, is_last=is_last)
+
+        for m in (msg,) + args:
+            self.counter_write += len(m)
+
+        if self.log:
+            self._log_event(MitmChannel.LogRecord(time=time.perf_counter(), type=MitmEventType.WRITE, data=msg))
+            for m in args:
+                self._log_event(MitmChannel.LogRecord(time=time.perf_counter(), type=MitmEventType.WRITE_WITH_PREVIOUS, data=m))
+
+    def read_sync(self):
+        data = self.orig.read_sync()
+        self.counter_read += len(data)
+        if self.log:
+            self._log_event(MitmChannel.LogRecord(time=time.perf_counter(), type=MitmEventType.READ, data=data))
+        return data
+
+    def write_sync(self, msg, *args, is_last=False):
+        self.orig.write_sync(msg, *args, is_last=is_last)
 
         for m in (msg,) + args:
             self.counter_write += len(m)
@@ -65,3 +86,5 @@ class MitmChannel:
                 self._log_event(MitmChannel.LogRecord(time=time.perf_counter(), type=MitmEventType.WRITE_WITH_PREVIOUS, data=m))
 
 
+    def close(self):
+        self.orig.close()

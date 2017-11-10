@@ -1,5 +1,3 @@
-import sys
-import sys
 import time
 import random
 import socket
@@ -7,9 +5,8 @@ import logging
 import threading
 import socketserver
 from abc import ABCMeta, abstractmethod
-import codecs
 
-from saltchannel.channel import SocketChannel, StreamChannel
+from saltchannel.channel import SocketChannel
 from .mitm_channel import MitmChannel
 
 
@@ -56,31 +53,15 @@ class MpClientServerPair(ClientServerPair):
 
             def handle(self):
                 ch = SocketChannel(self.request)
-                #ch = StreamChannel(self.rfile)
-
                 session.server_session(ch)
-                #session.server_session(MitmChannel(ch, log=logging.getLogger(__name__)))
-                # Echo the back to the client
-              #  try:
-              #      while True:
-              #          data = self.request.recv(4096)
-              #          if not data:
-              #              return
-              #          print("len:{}, data:'{}'".format(len(data), codecs.encode(data, 'hex')))
-              #          self.request.send(data)
-               # except ConnectionResetError:
-               #     return
 
         return TCPRequestHandler
 
     class TestTCPServer(socketserver.TCPServer):
         pass
 
-
     def __init__(self, session):
         super(MpClientServerPair, self).__init__(session)
-        #self.chaSocketChannel(sock)
-
 
     def start_server(self):
         self.server = MpClientServerPair.TestTCPServer(("localhost", 0), self._server_handler_factory(self.session))
@@ -105,17 +86,11 @@ class MpClientServerPair(ClientServerPair):
 
     def _run_session(self):
         # server session de-facto started with MpClientServerPair.TCPRequestHandler
-
-        # now create ByteChannel
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             sock.connect(self.server.server_address)
             channel = SocketChannel(sock)
-
             self.is_session_active = True
-
-            # invoke method(-s) in Session object instance
-            #self.session.client_session(channel)
             self.session.client_session(MitmChannel(channel, log=logging.getLogger(__name__)))
 
         except Exception as e:

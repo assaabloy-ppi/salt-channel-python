@@ -1,1 +1,0 @@
-What is required to implement in Python?

@@ -1,9 +1,9 @@
 import struct
 import logging
-import asyncio.coroutines as coroutines
 import asyncio
 import asyncio.events as events
 import asyncio.streams as streams
+import asyncio.coroutines as coroutines
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from abc import ABCMeta, abstractmethod
 
@@ -85,6 +85,7 @@ class ClientServerPairA:
         reader, writer = await open_saltchannel_connection('127.0.0.1', 8888, loop=loop)
         await self.session.client_session(reader, writer)
 
+
     def _spawn_client_process(self):
         new_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(new_loop)
@@ -107,7 +108,7 @@ class ClientServerPairA:
         SERVER = LOOP.run_until_complete(coro)
         logging.info('Serving on {}'.format(SERVER.sockets[0].getsockname()))
 
-    def run_sessions(self, jitter=True):
+    def run_sessions(self):
         global LOOP
         self.is_session_active = True
         try:
