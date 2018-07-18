@@ -38,7 +38,7 @@ class Syncizer(ABCMeta):
     """ A metaclass which adds synchronous version of coroutines.
 
     This metaclass finds all coroutine functions defined on a class
-    and adds a synchronous version with a '_s' suffix appended to the
+    and adds a synchronous version with a '_sync' suffix appended to the
     original function name.
     """
     def __new__(cls, clsname, bases, dct, **kwargs):
